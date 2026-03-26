@@ -1,9 +1,7 @@
 import { supabase } from '../supabase'
 
 export const listingService = {
-  // ==========================================
-  // 1. ลงประกาศขายขยะ (Create Listing)
-  // ==========================================
+  
   async createListing(data: {
     owner_id: number;
     title: string;

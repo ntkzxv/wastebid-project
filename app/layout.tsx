@@ -30,20 +30,19 @@ export default function RootLayout({
     <html
       lang="th"
       className={`${inter.variable} ${kanit.variable} h-full antialiased scroll-smooth`}
-      suppressHydrationWarning // ป้องกัน Warning เรื่อง Extension ใน Browser ตีกับเนื้อหา
+      suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col font-kanit bg-white text-[#4A4A4A] selection:bg-[#748D83]/10 selection:text-[#3A4A43]">
+      <body className="min-h-screen flex flex-col font-kanit bg-white text-[#4A4A43] selection:bg-[#748D83]/10 selection:text-[#3A4A43]">
         
-        {/* Navbar: แสดงผลทุกหน้า */}
         <MinimalNavbar />
 
-        {/* Main Content: ล็อกความกว้างสูงสุดเพื่อให้ดูดีบนจอ Mac/Desktop ใหญ่ๆ */}
-        <main className="flex-grow w-full max-w-[1440px] mx-auto transition-opacity duration-700">
+        {/* กูเพิ่ม pt-28 เข้าไปตรงนี้เพื่อให้เนื้อหาไม่มุดใต้ Navbar ครับ */}
+        <main className="flex-grow w-full max-w-[1440px] mx-auto transition-opacity duration-700 pt-28">
           {children}
         </main>
 
-        {/* คุณสามารถเพิ่ม Footer ตรงนี้ได้ในอนาคต */}
       </body>
     </html>
   );
 }
+

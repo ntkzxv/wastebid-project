@@ -99,9 +99,6 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="text-right px-2">
-            <button type="button" disabled={loading} className="text-[10px] font-bold text-gray-400 hover:text-[#748D83] transition-colors uppercase tracking-widest disabled:opacity-50">ลืมรหัสผ่าน?</button>
-          </div>
 
           <button type="submit" disabled={loading} className="w-full bg-[#3A4A43] text-white py-4.5 rounded-[20px] font-black text-[10px] uppercase tracking-[0.25em] hover:bg-[#2D3A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(58,74,67,0.15)] mt-6 disabled:opacity-70 disabled:cursor-wait">
             {loading ? <Loader2 className="animate-spin" size={18} /> : <>เข้าสู่ระบบ <ArrowRight size={14} /></>}
