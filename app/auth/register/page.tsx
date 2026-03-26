@@ -10,7 +10,7 @@ import Notification, { NotificationType } from '../../components/ui/Notification
 export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // 🛡️ เพิ่มตัวล็อกสถานะสำเร็จ
+  const [isSuccess, setIsSuccess] = useState(false);
   const [noti, setNoti] = useState({ show: false, type: 'success' as NotificationType, title: '', msg: '' });
   
   const [formData, setFormData] = useState({
@@ -20,44 +20,57 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 🛡️ กันเหนียว: ถ้ากำลังโหลด หรือสมัครสำเร็จไปแล้ว ห้ามรันฟังก์ชันนี้ซ้ำ
+    // 🛡️ กันการกดซ้ำ
     if (loading || isSuccess) return;
 
     setLoading(true);
 
     try {
-      // 1. เช็คความยาวรหัสผ่านก่อนส่ง
+      // 1. ตรวจสอบความถูกต้องเบื้องต้น
       if (formData.password.length < 6) {
         throw new Error("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
       }
-
-      // 2. เช็คก่อนว่า Email นี้มีคนใช้หรือยัง
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', formData.email)
-        .maybeSingle(); // ใช้ maybeSingle เพื่อไม่ให้ error ถ้าไม่เจอ
-
-      if (existingUser) {
-        throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง");
       }
 
-      // 3. Insert ลงตาราง users
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([{ 
-          name: formData.name, 
-          email: formData.email, 
-          password: formData.password, 
-          phone: formData.phone,
-          role: formData.role,
-          status: 'active',
-          created_at: new Date()
-        }]);
+      // 2. สมัครผ่าน Supabase Auth (ปลอดภัย 100%)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.name, // เก็บชื่อไว้ใน metadata ด้วยเผื่อใช้
+          }
+        }
+      });
 
-      if (insertError) throw insertError;
+      if (authError) {
+        // ดัก Error กรณีอีเมลซ้ำจากฝั่ง Auth
+        if (authError.message.includes('already registered') || authError.status === 400) {
+           throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
+        }
+        throw authError;
+      }
 
-      // ✅ สมัครสำเร็จ: ล็อกสถานะไว้ทันที
+      // 3. เอาข้อมูลมา Insert ลงตาราง users ของเรา
+      if (authData.user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ 
+            // ให้ id ตรงกับ auth.users.id (ถ้าตั้ง id เป็น SERIAL ใน DB ก็เอาบรรทัดนี้ออกได้)
+            username: formData.name, 
+            email: formData.email, 
+            password_hash: 'managed_by_supabase_auth', // รหัสผ่านจริงอยู่ใน Auth แล้ว
+            phone: formData.phone,
+            role: formData.role
+            // status กับ created_at ไม่ต้องส่ง เพราะเราตั้ง Default ไว้ใน DB แล้ว
+          }]);
+
+        if (insertError) throw insertError;
+      }
+
+      // ✅ สมัครสำเร็จ
       setIsSuccess(true); 
       setNoti({ show: true, type: 'success', title: 'สำเร็จ', msg: 'สมัครสมาชิกเรียบร้อย! กำลังพาไปหน้าเข้าสู่ระบบ...' });
       
@@ -66,14 +79,14 @@ export default function RegisterPage() {
 
     } catch (err: any) {
       setNoti({ show: true, type: 'error', title: 'ผิดพลาด', msg: err.message });
-      setLoading(false); // ถ้าพลาด ให้ปลดโหลดเพื่อให้ User แก้ไขข้อมูลได้
+      setLoading(false); // ปลดโหลดให้แก้ข้อมูลได้
     }
   };
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center px-6 py-12 font-kanit fade-in-custom relative">
       
-      {/* 🛡️ Overlay ชั้นสูงสุด: กันการคลิกทุกอย่างถ้ากำลัง Loading หรือสมัครสำเร็จแล้ว */}
+      {/* 🛡️ Overlay กันคลิกซ้ำ */}
       {(loading || isSuccess) && (
         <div className="fixed inset-0 z-[100] cursor-wait" />
       )}
@@ -102,7 +115,7 @@ export default function RegisterPage() {
                 type={field.type} 
                 required 
                 placeholder={field.placeholder}
-                disabled={loading || isSuccess} // 🛡️ ล็อก Input
+                disabled={loading || isSuccess}
                 className="w-full bg-[#F8F9F8] border border-gray-50 rounded-[20px] pl-14 pr-6 py-4.5 outline-none focus:bg-[#F4F5F4] focus:border-[#748D83]/20 focus:ring-4 focus:ring-[#748D83]/5 transition-all duration-300 text-sm text-[#4A4A4A] disabled:cursor-not-allowed"
                 onChange={(e) => setFormData({...formData, [field.id]: e.target.value})}
               />
@@ -116,7 +129,7 @@ export default function RegisterPage() {
                 <button
                   key={r} 
                   type="button" 
-                  disabled={loading || isSuccess} // 🛡️ ล็อกปุ่ม Role
+                  disabled={loading || isSuccess}
                   onClick={() => setFormData({...formData, role: r})}
                   className={`flex-1 py-3.5 rounded-[15px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                     formData.role === r ? 'bg-white text-[#3A4A43] shadow-sm border border-gray-100' : 'text-gray-300 hover:text-gray-500'
@@ -131,7 +144,7 @@ export default function RegisterPage() {
 
           <button 
             type="submit" 
-            disabled={loading || isSuccess} // 🛡️ ล็อกปุ่ม Submit
+            disabled={loading || isSuccess}
             className="w-full bg-[#3A4A43] text-white py-4.5 rounded-[20px] font-black text-[10px] uppercase tracking-[0.25em] hover:bg-[#2D3A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(58,74,67,0.15)] mt-4 disabled:opacity-70 disabled:cursor-wait"
           >
             {(loading || isSuccess) ? <Loader2 className="animate-spin" size={18} /> : <>สมัครสมาชิก <ArrowRight size={14} /></>}

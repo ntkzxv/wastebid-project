@@ -13,49 +13,63 @@ export default function LoginPage() {
   const [noti, setNoti] = useState({ show: false, type: 'success' as NotificationType, title: '', msg: '' });
   const [formData, setFormData] = useState({ email: '', password: '' });
 
- const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // ค้นหา User จากตาราง users
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', formData.email)
-      .eq('password', formData.password) // เช็ครหัสผ่านตรงๆ
-      .single();
+    try {
+      // 1. ให้ Supabase Auth จัดการเช็คความปลอดภัยของ Email & Password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    if (error || !user) {
-      throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      if (authError || !authData.user) {
+        throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      }
+
+      // 2. เมื่อ Auth ผ่าน ค่อยไปดึงข้อมูล Profile จากตาราง users
+      const { data: user, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', formData.email)
+        .single();
+
+      if (dbError || !user) {
+        throw new Error("ล็อกอินสำเร็จ แต่ไม่พบข้อมูลโปรไฟล์ในระบบ");
+      }
+
+      // 3. เก็บข้อมูลลง LocalStorage เหมือนเดิมเป๊ะ
+      localStorage.setItem('wastebid_user', JSON.stringify(user));
+
+      // 4. แจ้งเตือนสำเร็จ (เช็คด้วยว่าใน DB มึงใช้ชื่อคอลัมน์ name หรือ username)
+      setNoti({
+        show: true,
+        type: 'success',
+        title: 'สำเร็จ',
+        msg: `ยินดีต้อนรับคุณ ${user.username || user.name || 'ผู้ใช้งาน'}`
+      });
+
+      setTimeout(() => {
+        window.location.href = '/dashboard'; // บังคับย้ายหน้าและรีเฟรชไปในตัว จบปิ๊ง!
+      }, 1500);
+
+    } catch (err: any) {
+      setNoti({ show: true, type: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', msg: err.message });
+    } finally {
+      setLoading(false);
     }
-
-    // เก็บข้อมูล User ลงใน LocalStorage (เพื่อให้เครื่องจำได้ว่าล็อกอินแล้ว)
-    localStorage.setItem('wastebid_user', JSON.stringify(user));
-
-    setNoti({ show: true, type: 'success', title: 'สำเร็จ', msg: `ยินดีต้อนรับคุณ ${user.name}` });
-    
-    setTimeout(() => {
-      router.push('/dashboard');
-      window.location.reload(); // รีเฟรชเพื่อให้ Navbar เห็นค่าใน LocalStorage
-    }, 1500);
-
-  } catch (err: any) {
-    setNoti({ show: true, type: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', msg: err.message });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center px-6 py-12 font-kanit fade-in-custom relative">
-      
+
       {/* 🛡️ Overlay กันการกดซ้ำ */}
       {loading && <div className="fixed inset-0 z-[100] cursor-wait" />}
 
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }} 
-        animate={{ opacity: 1, y: 0 }} 
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
         className={`w-full max-w-md transition-opacity duration-300 ${loading ? 'opacity-60' : 'opacity-100'}`}
       >
         <div className="text-center mb-10">
@@ -69,19 +83,19 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="relative group">
             <Mail className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${loading ? 'text-gray-200' : 'text-gray-300 group-focus-within:text-[#748D83]'}`} size={16} />
-            <input 
+            <input
               type="email" required placeholder="อีเมลของคุณ" disabled={loading}
               className="w-full bg-[#F8F9F8] border border-gray-50 rounded-[20px] pl-14 pr-6 py-4.5 outline-none focus:bg-[#F4F5F4] focus:border-[#748D83]/20 focus:ring-4 focus:ring-[#748D83]/5 transition-all duration-300 text-sm text-[#4A4A4A] disabled:cursor-not-allowed"
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
           <div className="relative group">
             <Lock className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${loading ? 'text-gray-200' : 'text-gray-300 group-focus-within:text-[#748D83]'}`} size={16} />
-            <input 
+            <input
               type="password" required placeholder="รหัสผ่าน" disabled={loading}
               className="w-full bg-[#F8F9F8] border border-gray-50 rounded-[20px] pl-14 pr-6 py-4.5 outline-none focus:bg-[#F4F5F4] focus:border-[#748D83]/20 focus:ring-4 focus:ring-[#748D83]/5 transition-all duration-300 text-sm text-[#4A4A4A] disabled:cursor-not-allowed"
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           </div>
 
@@ -99,7 +113,7 @@ export default function LoginPage() {
         </p>
       </motion.div>
 
-      <Notification isVisible={noti.show} onClose={() => setNoti({...noti, show: false})} type={noti.type} title={noti.title} message={noti.msg} />
+      <Notification isVisible={noti.show} onClose={() => setNoti({ ...noti, show: false })} type={noti.type} title={noti.title} message={noti.msg} />
     </div>
   );
 }
