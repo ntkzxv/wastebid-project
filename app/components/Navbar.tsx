@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, MessageCircle, LogOut, Gavel, 
+  MessageCircle, LogOut, Gavel, 
   LayoutDashboard, Store, Search, Menu, X 
 } from 'lucide-react';
 
@@ -26,12 +26,12 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-const handleLogout = () => {
-  localStorage.removeItem('wastebid_user');
-  setUser(null); 
-  setMobileMenuOpen(false);
-  window.location.href = '/auth/login'; 
-};
+  const handleLogout = () => {
+    localStorage.removeItem('wastebid_user');
+    setUser(null); 
+    setMobileMenuOpen(false);
+    window.location.href = '/auth/login'; 
+  };
 
   if (!mounted || !user) return null;
 
@@ -42,7 +42,6 @@ const handleLogout = () => {
       isScrolled ? 'py-3' : 'py-5'
     }`}>
       <div className="max-w-7xl mx-auto px-6">
-        {/* Glassmorphism Container */}
         <div className={`relative flex items-center justify-between p-2 px-6 rounded-[2.2rem] transition-all duration-500 ${
           isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-lg border border-white/20' : 'bg-white border border-gray-100'
         }`}>
@@ -73,27 +72,16 @@ const handleLogout = () => {
 
             <div className="h-6 w-[1px] bg-gray-200 mx-4" />
 
+            {/* --- ACTION BUTTONS --- */}
             <div className="flex items-center gap-3">
-              {/* ปุ่มลงขาย - โชว์เฉพาะ OWNER */}
-              {isOwner && (
-                <Link href="/listings/create">
-                  <motion.button 
-                    whileHover={{ scale: 1.05, backgroundColor: '#748D83' }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-[#3A4A43] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-md transition-all"
-                  >
-                    <Plus size={16} /> ลงขายขยะ
-                  </motion.button>
-                </Link>
-              )}
-
-              {/* Logout */}
+              {/* เหลือแค่ปุ่ม Logout คลีนๆ ตามสั่ง */}
               <motion.button 
-                whileHover={{ backgroundColor: '#fee2e2', color: '#ef4444' }}
+                whileHover={{ backgroundColor: '#fee2e2', color: '#ef4444', scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleLogout}
-                className="p-2.5 rounded-xl bg-gray-50 text-gray-400 transition-all border border-gray-100"
+                className="p-3 rounded-xl bg-gray-50 text-gray-400 transition-all border border-gray-100 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
               >
-                <LogOut size={18} />
+                <LogOut size={16} /> Logout
               </motion.button>
             </div>
           </div>
@@ -115,18 +103,18 @@ const handleLogout = () => {
             className="absolute top-full left-0 w-full p-4 md:hidden"
           >
             <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 flex flex-col gap-4">
+              
               <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl font-bold text-[#3A4A43]">
                 <LayoutDashboard size={20}/> แดชบอร์ด
               </Link>
               <Link href="/chat" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl font-bold text-[#3A4A43]">
                 <MessageCircle size={20}/> แชทสนทนา
               </Link>
-              {isOwner && (
-                <Link href="/listings/create" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-[#748D83]/10 rounded-2xl font-bold text-[#748D83]">
-                  <Plus size={20}/> ลงประกาศขายใหม่
-                </Link>
-              )}
-              <button onClick={handleLogout} className="flex items-center gap-4 p-4 text-red-500 font-bold border-t border-gray-50 pt-6">
+              
+              <button 
+                onClick={handleLogout} 
+                className="flex items-center justify-center gap-4 p-5 text-red-500 font-black uppercase text-xs tracking-widest border-t border-gray-50 mt-2"
+              >
                 <LogOut size={20} /> ออกจากระบบ
               </button>
             </div>

@@ -6,13 +6,14 @@ import {
   Plus, Gavel, Store, Package, 
   TrendingUp, Clock, LayoutDashboard, 
   ChevronRight, MessageCircle, CheckCircle2,
-  AlertCircle, ArrowRight
+  AlertCircle, ArrowRight, Camera, User as UserIcon, Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false); // 📸 State สำหรับอัปโหลดรูป
 
   useEffect(() => {
     const savedUser = localStorage.getItem('wastebid_user');
@@ -21,6 +22,51 @@ export default function Dashboard() {
     }
     setLoading(false);
   }, []);
+
+  // 🚀 ฟังก์ชันอัปโหลดรูปโปรไฟล์ (Avatar)
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // 1. ตั้งชื่อไฟล์ (ใช้ User ID ผสมสุ่มเพื่อไม่ให้ชื่อซ้ำและ Cache ค้าง)
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // 2. อัปโหลดเข้า Storage 'avatars' (อย่าลืมสร้าง Bucket นี้ใน Supabase นะ!)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 3. ดึง Public URL ของรูปที่อัปโหลดเสร็จ
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const newAvatarUrl = data.publicUrl;
+
+      // 4. อัปเดตลง Database ตาราง users
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // 5. ✅ อัปเดต LocalStorage และ State เพื่อให้ Navbar เปลี่ยนรูปทันที
+      const updatedUser = { ...user, avatar_url: newAvatarUrl };
+      localStorage.setItem('wastebid_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      alert("📸 อัปเดตรูปโปรไฟล์สำเร็จ!");
+    } catch (error: any) {
+      console.error("Upload Error:", error);
+      alert("ผิดพลาด: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] font-kanit">
@@ -43,8 +89,45 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="bg-[#FAFAFA] min-h-screen font-kanit pb-20">
-      {/* 🛡️ Switch View based on Role */}
+    <div className="bg-[#FAFAFA] min-h-screen font-kanit pb-20 pt-10">
+      
+      {/* 📸 [NEW] Profile Header: ส่วนที่เพิ่มใหม่เพื่อให้ดูน่าเชื่อถือ */}
+      <div className="max-w-7xl mx-auto px-6 mb-10">
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+          {/* ตกแต่ง Background นิดหน่อย */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#748D83]/5 rounded-full -mr-16 -mt-16"></div>
+          
+          {/* Avatar Upload UI */}
+          <div className="relative shrink-0">
+            <div className="w-28 h-28 rounded-[2.5rem] overflow-hidden bg-gray-50 border-4 border-white shadow-xl flex items-center justify-center">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-gray-300"><UserIcon size={48} /></div>
+              )}
+            </div>
+            
+            {/* ปุ่มเปลี่ยนรูป */}
+            <label className="absolute -bottom-2 -right-2 p-3 bg-[#3A4A43] text-white rounded-2xl cursor-pointer hover:bg-[#748D83] transition-all shadow-lg active:scale-90 border-2 border-white">
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} className="hidden" />
+            </label>
+          </div>
+
+          {/* ข้อมูล User */}
+          <div className="text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+              <h2 className="text-3xl font-black text-[#3A4A43] tracking-tighter">{user.username}</h2>
+              <span className="px-4 py-1.5 bg-[#748D83]/10 text-[#748D83] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#748D83]/20">
+                {user.role}
+              </span>
+            </div>
+            <p className="text-gray-400 text-sm font-medium">ยินดีต้อนรับกลับมา! จัดการข้อมูลส่วนตัวและการทำธุรกรรมของคุณได้ที่นี่</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 🛡️ Switch View based on Role (Logic เดิมของมึง) */}
       {user.role === 'owner' ? (
         <OwnerDashboardView user={user} />
       ) : (
@@ -55,7 +138,7 @@ export default function Dashboard() {
 }
 
 // ==========================================================
-// 🏭 [VIEW] สำหรับ "ผู้ขาย" (Owner)
+// 🏭 [VIEW] สำหรับ "ผู้ขาย" (Owner) - โค้ดเดิมของมึง
 // ==========================================================
 function OwnerDashboardView({ user }: { user: any }) {
   const [items, setItems] = useState<any[]>([]);
@@ -63,7 +146,6 @@ function OwnerDashboardView({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchOwnerData = async () => {
-      // ดึงของที่เราขาย + Join เพื่อดูคนประมูลล่าสุด (คนชนะ)
       const { data } = await supabase
         .from('waste_listings')
         .select(`
@@ -84,30 +166,23 @@ function OwnerDashboardView({ user }: { user: any }) {
     fetchOwnerData();
   }, [user.id]);
 
-  // แยก Logic: กำลังขาย กับ จบแล้ว
   const activeItems = items.filter(i => i.status === 'open' && new Date(i.end_time) > new Date());
   const finishedItems = items.filter(i => i.status === 'closed' || new Date(i.end_time) <= new Date());
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-10">
-      {/* Header */}
+    <main className="max-w-7xl mx-auto px-6 py-5">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-[#748D83] rounded-full"></div>
-            <span className="text-[10px] font-black text-[#748D83] uppercase tracking-[0.3em]">Owner Mode</span>
-          </div>
+          <h2 className="text-sm font-black text-[#748D83] uppercase tracking-[0.3em] mb-1">Owner Management</h2>
           <h1 className="text-4xl font-black text-[#3A4A43] tracking-tighter">การจัดการการขาย</h1>
-          <p className="text-gray-400 mt-2 font-medium">จัดการรายการขยะและนัดรับสินค้ากับผู้ชนะ</p>
         </div>
         <Link href="/listings/create">
-          <button className="bg-[#3A4A43] text-white px-8 py-4 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest hover:bg-[#748D83] transition-all flex items-center gap-3 shadow-xl shadow-gray-200 active:scale-95 group">
+          <button className="bg-[#3A4A43] text-white px-8 py-4 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest hover:bg-[#748D83] transition-all flex items-center gap-3 shadow-xl active:scale-95 group">
             <Plus size={18} className="group-hover:rotate-90 transition-transform" /> เพิ่มรายการขยะใหม่
           </button>
         </Link>
       </div>
 
-      {/* --- 🟢 ส่วนที่ 1: รายการที่กำลังประมูลอยู่ --- */}
       <div className="mb-16">
         <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8 flex items-center gap-2">
           <Clock size={16} className="text-[#748D83]" /> รายการที่เปิดประมูลอยู่ ({activeItems.length})
@@ -126,64 +201,62 @@ function OwnerDashboardView({ user }: { user: any }) {
         )}
       </div>
 
-      {/* --- 🏁 ส่วนที่ 2: รายการที่จบแล้ว (นัดรับ/แชท) --- */}
       <div>
         <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8 flex items-center gap-2">
           <CheckCircle2 size={16} className="text-[#3A4A43]" /> จบการประมูลแล้ว ({finishedItems.length})
         </h2>
         <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
           {finishedItems.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-[#F8F9F8] text-[9px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">
-                <tr>
-                  <th className="p-8">สินค้า</th>
-                  <th className="p-8 text-center">ราคาจบ</th>
-                  <th className="p-8">ผู้ชนะการประมูล</th>
-                  <th className="p-8 text-right">ดำเนินการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {finishedItems.map(item => {
-                  const winner = item.bids && item.bids.length > 0 ? item.bids[0] : null;
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="p-8">
-                        <div className="flex items-center gap-4">
-                           <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0">
-                              <img src={item.image_url} className="w-full h-full object-cover" />
-                           </div>
-                           <p className="font-black text-[#3A4A43] text-sm">{item.title}</p>
-                        </div>
-                      </td>
-                      <td className="p-8 text-center">
-                        <p className="font-black text-[#748D83]">฿{Number(item.current_price).toLocaleString()}</p>
-                      </td>
-                      <td className="p-8">
-                        {winner ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-[#E8EDEB] rounded-full flex items-center justify-center text-[9px] font-bold text-[#3A4A43]">
-                              {winner.users?.username?.substring(0, 2).toUpperCase()}
-                            </div>
-                            <span className="text-xs font-bold text-gray-600">{winner.users?.username}</span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#F8F9F8] text-[9px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">
+                  <tr>
+                    <th className="p-8">สินค้า</th>
+                    <th className="p-8 text-center">ราคาจบ</th>
+                    <th className="p-8">ผู้ชนะการประมูล</th>
+                    <th className="p-8 text-right">ดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {finishedItems.map(item => {
+                    const winner = item.bids && item.bids.length > 0 ? item.bids[0] : null;
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-8">
+                          <div className="flex items-center gap-4">
+                             <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 shadow-sm">
+                                <img src={item.image_urls?.[0]} className="w-full h-full object-cover" />
+                             </div>
+                             <p className="font-black text-[#3A4A43] text-sm">{item.title}</p>
                           </div>
-                        ) : <span className="text-xs text-gray-300 italic">ไม่มีผู้ประมูล</span>}
-                      </td>
-                      <td className="p-8 text-right">
-                        {winner ? (
-                          <Link href={`/chat/${winner.bidder_id}`}>
-                            <button className="bg-[#3A4A43] text-white px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#748D83] transition-all flex items-center gap-2 ml-auto shadow-md">
-                              <MessageCircle size={14} /> ติดต่อผู้ชนะ
-                            </button>
-                          </Link>
-                        ) : (
-                          <button disabled className="text-gray-300 text-[9px] font-bold uppercase tracking-widest">ลงขายใหม่</button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="p-8 text-center">
+                          <p className="font-black text-[#748D83]">฿{Number(item.current_price).toLocaleString()}</p>
+                        </td>
+                        <td className="p-8">
+                          {winner ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-600">{winner.users?.username}</span>
+                            </div>
+                          ) : <span className="text-xs text-gray-300 italic">ไม่มีผู้ประมูล</span>}
+                        </td>
+                        <td className="p-8 text-right">
+                          {winner ? (
+                            <Link href={`/chat/${winner.bidder_id}`}>
+                              <button className="bg-[#3A4A43] text-white px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#748D83] transition-all flex items-center gap-2 ml-auto shadow-md">
+                                <MessageCircle size={14} /> ติดต่อผู้ชนะ
+                              </button>
+                            </Link>
+                          ) : (
+                            <button disabled className="text-gray-300 text-[9px] font-bold uppercase tracking-widest">ลงขายใหม่</button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="p-20 text-center text-gray-300 font-bold uppercase tracking-widest text-xs">ยังไม่มีรายการที่จบการประมูล</div>
           )}
@@ -194,7 +267,7 @@ function OwnerDashboardView({ user }: { user: any }) {
 }
 
 // ==========================================================
-// 🛒 [VIEW] สำหรับ "ผู้ประมูล" (Bidder)
+// 🛒 [VIEW] สำหรับ "ผู้ประมูล" (Bidder) - โค้ดเดิมของมึง
 // ==========================================================
 function BidderDashboardView({ user }: { user: any }) {
   const [marketItems, setMarketItems] = useState<any[]>([]);
@@ -205,7 +278,7 @@ function BidderDashboardView({ user }: { user: any }) {
         .from('waste_listings')
         .select('*')
         .eq('status', 'open')
-        .neq('owner_id', user.id) // ไม่โชว์ของตัวเอง (ถ้ามี)
+        .neq('owner_id', user.id)
         .order('end_time', { ascending: true });
       setMarketItems(data || []);
     };
@@ -213,14 +286,10 @@ function BidderDashboardView({ user }: { user: any }) {
   }, [user.id]);
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-10">
+    <main className="max-w-7xl mx-auto px-6 py-5">
       <div className="mb-12">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 bg-[#748D83] rounded-full animate-pulse"></div>
-          <span className="text-[10px] font-black text-[#748D83] uppercase tracking-[0.3em]">Marketplace</span>
-        </div>
+        <h2 className="text-sm font-black text-[#748D83] uppercase tracking-[0.3em] mb-1">Recycle Marketplace</h2>
         <h1 className="text-4xl font-black text-[#2D3A2E] tracking-tighter">ขยะรีไซเคิลรอบตัวคุณ</h1>
-        <p className="text-gray-400 mt-2 font-medium">ค้นหาวัสดุที่คุณต้องการและเริ่มเสนอราคาแข่งขัน</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -237,42 +306,42 @@ function BidderDashboardView({ user }: { user: any }) {
 }
 
 // ==========================================================
-// 💳 [COMPONENT] การ์ดแสดงผลขยะ (Shared Card)
+// 💳 [COMPONENT] การ์ดแสดงผลขยะ - โค้ดเดิมของมึง
 // ==========================================================
 function AuctionCard({ item, isOwner = false }: { item: any, isOwner?: boolean }) {
   return (
-    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
-      <div className="aspect-[4/3] rounded-[2rem] overflow-hidden mb-6 bg-gray-50 relative">
+    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-[3rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
+      <div className="aspect-[4/3] rounded-[2.2rem] overflow-hidden mb-6 bg-gray-50 relative">
         <img 
-          src={item.image_url || 'https://images.unsplash.com/photo-1558610530-5896a2472648?q=80&w=800'} 
+          src={item.image_urls?.[0] || 'https://images.unsplash.com/photo-1558610530-5896a2472648?q=80&w=800'} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
         />
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-[9px] font-black text-[#3A4A43] shadow-sm uppercase tracking-widest border border-white/50">
+        <div className="absolute top-5 left-5 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-[10px] font-black text-[#3A4A43] shadow-sm uppercase tracking-widest border border-white/50">
            {item.category}
         </div>
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-black text-[#2D3A2E] leading-tight truncate">{item.title}</h3>
+        <h3 className="text-xl font-black text-[#2D3A2E] leading-tight truncate px-2">{item.title}</h3>
         
-        <div className="flex items-center justify-between py-4 border-y border-gray-50">
+        <div className="flex items-center justify-between py-5 border-y border-gray-50 px-2">
           <div>
-            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">ราคาปัจจุบัน</p>
-            <p className="text-xl font-black text-[#748D83]">฿{Number(item.current_price).toLocaleString()}</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">ราคาปัจจุบัน</p>
+            <p className="text-2xl font-black text-[#748D83]">฿{Number(item.current_price).toLocaleString()}</p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center justify-end gap-1">
-              <Clock size={10} /> {isOwner ? 'หมดเวลา' : 'เวลาที่เหลือ'}
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 flex items-center justify-end gap-1">
+              <Clock size={12} /> {isOwner ? 'ปิดประมูล' : 'เวลาที่เหลือ'}
             </p>
-            <p className="text-xs font-bold text-[#3A4A43] uppercase">
+            <p className="text-xs font-bold text-[#3A4A43] uppercase bg-gray-50 px-3 py-1 rounded-lg">
               {new Date(item.end_time).toLocaleDateString('th-TH')}
             </p>
           </div>
         </div>
 
         <Link href={`/listings/${item.id}`} className="block">
-          <button className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${isOwner ? 'bg-[#F8F9F8] text-[#3A4A43] hover:bg-[#3A4A43] hover:text-white' : 'bg-[#3A4A43] text-white hover:bg-[#748D83] shadow-lg shadow-gray-100'}`}>
-            {isOwner ? 'จัดการ/ดูรายละเอียด' : 'เข้าร่วมประมูล'} <ArrowRight size={14} />
+          <button className={`w-full py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${isOwner ? 'bg-[#F8F9F8] text-[#3A4A43] hover:bg-[#3A4A43] hover:text-white' : 'bg-[#3A4A43] text-white hover:bg-[#748D83] shadow-lg shadow-gray-200'}`}>
+            {isOwner ? 'จัดการรายการนี้' : 'เข้าร่วมประมูล'} <ArrowRight size={16} />
           </button>
         </Link>
       </div>
