@@ -66,8 +66,8 @@ export default function WalletPage() {
             <main className="max-w-4xl mx-auto px-6">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Link href="/dashboard"><button className="p-3 bg-white rounded-full border border-gray-100 shadow-sm"><ArrowLeft size={20}/></button></Link>
-                    <h1 className="text-3xl font-black text-[#3A4A43]">Wallet Simulator</h1>
+                    <Link href="/dashboard"><button className="p-3 bg-white rounded-full border border-gray-100 shadow-sm"><ArrowLeft size={20} /></button></Link>
+                    <h1 className="text-5xl font-black text-[#3A4A43]">My Wallet</h1>
                 </div>
 
                 {/* Balance Card */}
@@ -82,15 +82,23 @@ export default function WalletPage() {
                     </div>
                 </div>
 
-                {/* Buttons: Bidder ฝาก/ถอน | Owner ถอนอย่างเดียว */}
+                {/* Buttons: Bidder ฝาก/ถอน | Owner ถอนอย่างเดียว (ปรับสีเข้มสะใจ มองเห็นจากปากซอย) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                     {user.role === 'bidder' && (
-                        <button onClick={() => setShowModal('deposit')} className="flex items-center justify-center gap-3 bg-white p-6 rounded-3xl font-black text-xs uppercase border border-gray-100 shadow-sm hover:bg-gray-50 transition-all">
-                            <Plus size={18} className="text-green-600" /> ฝากเงินทันที
+                        <button
+                            onClick={() => setShowModal('deposit')}
+                            className="flex items-center justify-center gap-3 bg-white p-7 rounded-3xl font-black text-[13px] uppercase border-2 border-gray-100 shadow-sm hover:bg-gray-50 transition-all text-[#3A4A43] group"
+                        >
+                            <Plus size={22} className="text-green-600 stroke-[3px] group-hover:scale-110 transition-transform" />
+                            <span className="tracking-widest">ฝากเงินทันที</span>
                         </button>
                     )}
-                    <button onClick={() => setShowModal('withdraw')} className={`flex items-center justify-center gap-3 bg-white p-6 rounded-3xl font-black text-xs uppercase border border-gray-100 shadow-sm hover:bg-gray-50 transition-all ${user.role === 'owner' ? 'sm:col-span-2' : ''}`}>
-                        <ArrowUpRight size={18} className="text-blue-600" /> ถอนเงินทันที
+                    <button
+                        onClick={() => setShowModal('withdraw')}
+                        className={`flex items-center justify-center gap-3 bg-white p-7 rounded-3xl font-black text-[13px] uppercase border-2 border-gray-100 shadow-sm hover:bg-gray-50 transition-all text-[#3A4A43] group ${user.role === 'owner' ? 'sm:col-span-2' : ''}`}
+                    >
+                        <ArrowUpRight size={22} className="text-blue-600 stroke-[3px] group-hover:scale-110 transition-transform" />
+                        <span className="tracking-widest">ถอนเงินทันที</span>
                     </button>
                 </div>
 
@@ -116,68 +124,68 @@ export default function WalletPage() {
                 </div>
             </main>
 
-{/* Modal ฟอร์ม (ปรับสีลายน้ำและหัวข้อให้ชัดขึ้น 100%) */}
-<AnimatePresence>
-    {showModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setShowModal(null)} className="absolute inset-0 bg-[#3A4A43]/40 backdrop-blur-sm" />
-            <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white w-full max-w-md rounded-[2.5rem] p-10 relative z-10 shadow-2xl">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-black text-[#3A4A43] uppercase tracking-tighter">
-                        {showModal === 'deposit' ? 'เติมเงินจำลอง' : 'ถอนเงินจำลอง'}
-                    </h2>
-                    <button onClick={()=>setShowModal(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
-                </div>
+            {/* Modal ฟอร์ม (ปรับสีลายน้ำและหัวข้อให้ชัดขึ้น 100%) */}
+            <AnimatePresence>
+                {showModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(null)} className="absolute inset-0 bg-[#3A4A43]/40 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-md rounded-[2.5rem] p-10 relative z-10 shadow-2xl">
+                            <div className="flex justify-between items-center mb-8">
+                                <h2 className="text-2xl font-black text-[#3A4A43] uppercase tracking-tighter">
+                                    {showModal === 'deposit' ? 'เติมเงินจำลอง' : 'ถอนเงินจำลอง'}
+                                </h2>
+                                <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                            </div>
 
-                <div className="space-y-5">
-                    {/* Input: ชื่อธนาคาร */}
-                    <div>
-                        <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">ธนาคาร (เช่น กสิกร, ไทยพาณิชย์)</label>
-                        <input 
-                            type="text" 
-                            placeholder="พิมพ์ชื่อธนาคารที่นี่..." 
-                            value={bankInfo.name} 
-                            onChange={e=>setBankInfo({...bankInfo, name: e.target.value})} 
-                            className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#1A1A1A] placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner" 
-                        />
+                            <div className="space-y-5">
+                                {/* Input: ชื่อธนาคาร */}
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">ธนาคาร (เช่น กสิกร, ไทยพาณิชย์)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="พิมพ์ชื่อธนาคารที่นี่..."
+                                        value={bankInfo.name}
+                                        onChange={e => setBankInfo({ ...bankInfo, name: e.target.value })}
+                                        className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#1A1A1A] placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner"
+                                    />
+                                </div>
+
+                                {/* Input: เลขบัญชี */}
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">เลขบัญชี</label>
+                                    <input
+                                        type="text"
+                                        placeholder="ระบุเลขบัญชี 10 หลัก..."
+                                        value={bankInfo.accNo}
+                                        onChange={e => setBankInfo({ ...bankInfo, accNo: e.target.value })}
+                                        className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#1A1A1A] placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner"
+                                    />
+                                </div>
+
+                                {/* Input: จำนวนเงิน */}
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">จำนวนเงินที่ต้องการ (บาท)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={amount}
+                                        onChange={e => setAmount(e.target.value)}
+                                        className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-2xl font-black text-[#3A4A43] placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleAction}
+                                    disabled={loading}
+                                    className="w-full bg-[#3A4A43] text-white py-5 rounded-2xl font-black uppercase tracking-widest mt-4 hover:bg-[#748D83] transition-all shadow-lg shadow-[#3A4A43]/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'ยืนยันรายการ'}
+                                </button>
+                            </div>
+                        </motion.div>
                     </div>
-
-                    {/* Input: เลขบัญชี */}
-                    <div>
-                        <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">เลขบัญชี</label>
-                        <input 
-                            type="text" 
-                            placeholder="ระบุเลขบัญชี 10 หลัก..." 
-                            value={bankInfo.accNo} 
-                            onChange={e=>setBankInfo({...bankInfo, accNo: e.target.value})} 
-                            className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#1A1A1A] placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner" 
-                        />
-                    </div>
-
-                    {/* Input: จำนวนเงิน */}
-                    <div>
-                        <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">จำนวนเงินที่ต้องการ (บาท)</label>
-                        <input 
-                            type="number" 
-                            placeholder="0.00" 
-                            value={amount} 
-                            onChange={e=>setAmount(e.target.value)} 
-                            className="w-full mt-2 p-4 bg-gray-50 rounded-2xl border-none text-2xl font-black text-[#3A4A43] placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#748D83] transition-all shadow-inner" 
-                        />
-                    </div>
-
-                    <button 
-                        onClick={handleAction} 
-                        disabled={loading} 
-                        className="w-full bg-[#3A4A43] text-white py-5 rounded-2xl font-black uppercase tracking-widest mt-4 hover:bg-[#748D83] transition-all shadow-lg shadow-[#3A4A43]/20 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={20}/> : 'ยืนยันรายการ'}
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    )}
-</AnimatePresence>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
