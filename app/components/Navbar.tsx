@@ -62,7 +62,7 @@ export default function Navbar() {
               <NavTab href="/dashboard" active={pathname === '/dashboard'} icon={<LayoutDashboard size={16}/>} label="แดชบอร์ด" />
               
               {isOwner ? (
-                <NavTab href="/dashboard" active={false} icon={<Store size={16}/>} label="ร้านของฉัน" />
+                <NavTab href="/dashboard" active={false} icon={<Store size={16}/>} label="การประมูลของฉัน" />
               ) : (
                 <NavTab href="/dashboard" active={false} icon={<Search size={16}/>} label="ตลาดประมูล" />
               )}

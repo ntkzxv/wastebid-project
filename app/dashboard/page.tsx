@@ -6,47 +6,72 @@ import {
   Plus, Gavel, Store, Package, 
   TrendingUp, Clock, LayoutDashboard, 
   ChevronRight, MessageCircle, CheckCircle2,
-  AlertCircle, ArrowRight, Camera, User as UserIcon, Loader2
+  AlertCircle, ArrowRight, Camera, User as UserIcon, Loader2,
+  Wallet // 💳 เพิ่มไอคอน Wallet
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false); // 📸 State สำหรับอัปโหลดรูป
+  const [uploading, setUploading] = useState(false);
+  const [balance, setBalance] = useState(0); // 💰 [NEW] State สำหรับยอดเงิน
 
   useEffect(() => {
     const savedUser = localStorage.getItem('wastebid_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      fetchWallet(parsedUser.id); // 🚀 [NEW] ดึงยอดเงินทันทีที่โหลด User
     }
     setLoading(false);
   }, []);
 
-  // 🚀 ฟังก์ชันอัปโหลดรูปโปรไฟล์ (Avatar)
+  // 💰 [NEW] ฟังก์ชันดึงยอดเงินจำลอง
+  const fetchWallet = async (userId: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // ถ้ายังไม่มี Wallet ให้สร้างใหม่ (สำหรับ User ใหม่)
+        const { data: newWallet } = await supabase
+          .from('wallets')
+          .insert([{ user_id: userId, balance: 0 }])
+          .select()
+          .single();
+        if (newWallet) setBalance(newWallet.balance);
+      } else if (data) {
+        setBalance(data.balance);
+      }
+    } catch (err) {
+      console.error("Wallet Fetch Error:", err);
+    }
+  };
+
+  // 🚀 ฟังก์ชันอัปโหลดรูปโปรไฟล์ (Avatar) - โค้ดเดิมของมึง
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // 1. ตั้งชื่อไฟล์ (ใช้ User ID ผสมสุ่มเพื่อไม่ให้ชื่อซ้ำและ Cache ค้าง)
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // 2. อัปโหลดเข้า Storage 'avatars' (อย่าลืมสร้าง Bucket นี้ใน Supabase นะ!)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // 3. ดึง Public URL ของรูปที่อัปโหลดเสร็จ
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const newAvatarUrl = data.publicUrl;
 
-      // 4. อัปเดตลง Database ตาราง users
       const { error: updateError } = await supabase
         .from('users')
         .update({ avatar_url: newAvatarUrl })
@@ -54,7 +79,6 @@ export default function Dashboard() {
 
       if (updateError) throw updateError;
 
-      // 5. ✅ อัปเดต LocalStorage และ State เพื่อให้ Navbar เปลี่ยนรูปทันที
       const updatedUser = { ...user, avatar_url: newAvatarUrl };
       localStorage.setItem('wastebid_user', JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -91,13 +115,11 @@ export default function Dashboard() {
   return (
     <div className="bg-[#FAFAFA] min-h-screen font-kanit pb-20 pt-10">
       
-      {/* 📸 [NEW] Profile Header: ส่วนที่เพิ่มใหม่เพื่อให้ดูน่าเชื่อถือ */}
+      {/* 📸 Profile Header */}
       <div className="max-w-7xl mx-auto px-6 mb-10">
         <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-          {/* ตกแต่ง Background นิดหน่อย */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#748D83]/5 rounded-full -mr-16 -mt-16"></div>
           
-          {/* Avatar Upload UI */}
           <div className="relative shrink-0">
             <div className="w-28 h-28 rounded-[2.5rem] overflow-hidden bg-gray-50 border-4 border-white shadow-xl flex items-center justify-center">
               {user.avatar_url ? (
@@ -106,15 +128,12 @@ export default function Dashboard() {
                 <div className="text-gray-300"><UserIcon size={48} /></div>
               )}
             </div>
-            
-            {/* ปุ่มเปลี่ยนรูป */}
             <label className="absolute -bottom-2 -right-2 p-3 bg-[#3A4A43] text-white rounded-2xl cursor-pointer hover:bg-[#748D83] transition-all shadow-lg active:scale-90 border-2 border-white">
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
 
-          {/* ข้อมูล User */}
           <div className="text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
               <h2 className="text-3xl font-black text-[#3A4A43] tracking-tighter">{user.username}</h2>
@@ -127,7 +146,31 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 🛡️ Switch View based on Role (Logic เดิมของมึง) */}
+      {/* 💳 [NEW] Wallet Stats Card: ส่วนที่เพิ่มใหม่เพื่อให้กดเข้าหน้า Wallet ได้ */}
+      <div className="max-w-7xl mx-auto px-6 mb-10">
+        <Link href="/dashboard/wallet">
+          <motion.div 
+            whileHover={{ y: -2, scale: 1.01 }}
+            className="inline-flex items-center gap-6 bg-white p-6 pr-12 rounded-[2.5rem] border border-gray-100 shadow-sm hover:border-[#748D83]/30 transition-all cursor-pointer group"
+          >
+            <div className="w-14 h-14 bg-[#3A4A43] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#3A4A43]/10 group-hover:bg-[#748D83] transition-colors">
+              <Wallet size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">ยอดเงินในวอลเล็ต (จำลอง)</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xs font-black text-[#748D83]">฿</span>
+                <p className="text-3xl font-black text-[#3A4A43] tracking-tighter">{balance.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="ml-6 p-2 bg-gray-50 rounded-full text-gray-300 group-hover:text-[#748D83] group-hover:bg-[#748D83]/5 transition-all">
+              <ChevronRight size={20} />
+            </div>
+          </motion.div>
+        </Link>
+      </div>
+
+      {/* 🛡️ Switch View based on Role */}
       {user.role === 'owner' ? (
         <OwnerDashboardView user={user} />
       ) : (
