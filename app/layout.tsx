@@ -32,12 +32,10 @@ export default function RootLayout({
       className={`${inter.variable} ${kanit.variable} h-full antialiased scroll-smooth`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col font-kanit bg-white text-[#4A4A43] selection:bg-[#748D83]/10 selection:text-[#3A4A43]">
-        
+      <body className="min-h-screen flex flex-col font-kanit antialiased text-[var(--foreground)] selection:bg-[color-mix(in_srgb,var(--wb-sage)_28%,transparent)] selection:text-[var(--wb-forest)] bg-[var(--background)]">
         <MinimalNavbar />
 
-        {/* กูเพิ่ม pt-28 เข้าไปตรงนี้เพื่อให้เนื้อหาไม่มุดใต้ Navbar ครับ */}
-        <main className="flex-grow w-full max-w-[1440px] mx-auto transition-opacity duration-700 pt-28">
+        <main className="flex-grow w-full max-w-[1440px] mx-auto transition-opacity duration-700 pt-24 sm:pt-28">
           {children}
         </main>
 

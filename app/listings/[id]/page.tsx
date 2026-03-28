@@ -1,7 +1,7 @@
 "use client";
 import { use } from 'react';
 import Link from 'next/link';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,27 +26,27 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     const [currentTime, setCurrentTime] = useState(new Date());
     const [bidAmount, setBidAmount] = useState(0);
 
-    useEffect(() => {
-        const savedUser = localStorage.getItem('wastebid_user');
-        if (savedUser) {
-            const parsed = JSON.parse(savedUser);
-            setCurrentUser(parsed);
-            fetchWallet(parsed.id);
-        }
-        fetchAuctionData();
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, [id]);
-
-    const fetchWallet = async (uid: any) => {
+    const fetchWallet = useCallback(async (uid: number) => {
         const { data } = await supabase.from('wallets').select('*').eq('user_id', uid).single();
         if (data) setUserWallet(data);
-    };
+    }, []);
 
-    const fetchAuctionData = async () => {
+    const refetchBidLogs = useCallback(async (listingId: number) => {
+        const { data } = await supabase
+            .from('bid_logs')
+            .select('*, user:users!user_id (username, avatar_url)')
+            .eq('listing_id', listingId)
+            .order('created_at', { ascending: false });
+        if (data) setBidLogs(data);
+    }, []);
+
+    const fetchAuctionData = useCallback(async () => {
         try {
-            const numericId = parseInt(id);
-            if (isNaN(numericId)) return router.push('/dashboard');
+            const numericId = parseInt(id, 10);
+            if (Number.isNaN(numericId)) {
+                router.push('/dashboard');
+                return;
+            }
 
             const { data: listingData, error: listingError } = await supabase
                 .from('waste_listings')
@@ -55,8 +55,9 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                 .single();
 
             if (listingError || !listingData) {
-                console.error("Listing Error:", listingError?.message);
-                return router.push('/dashboard');
+                console.error('Listing Error:', listingError?.message);
+                router.push('/dashboard');
+                return;
             }
 
             const { data: ownerData } = await supabase
@@ -74,13 +75,88 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
             setItem({ ...listingData, owner: ownerData });
             setBidLogs(logsData || []);
             setBidAmount(Number(listingData.current_price) + Number(listingData.min_increment));
-
         } catch (error) {
-            console.error("Fetch Error:", error);
+            console.error('Fetch Error:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, router]);
+
+    useEffect(() => {
+        setLoading(true);
+        const savedUser = localStorage.getItem('wastebid_user');
+        if (savedUser) {
+            const parsed = JSON.parse(savedUser);
+            setCurrentUser(parsed);
+            void fetchWallet(parsed.id);
+        }
+        void fetchAuctionData();
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, [id, fetchWallet, fetchAuctionData]);
+
+    useEffect(() => {
+        const numericId = parseInt(id, 10);
+        if (Number.isNaN(numericId)) return;
+
+        const channel = supabase
+            .channel(`listing-detail-${numericId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'waste_listings',
+                    filter: `id=eq.${numericId}`,
+                },
+                (payload) => {
+                    setItem((prev: any) => {
+                        if (!prev) return prev;
+                        const owner = prev.owner;
+                        return { ...prev, ...(payload.new as Record<string, unknown>), owner };
+                    });
+                    void refetchBidLogs(numericId);
+                    const saved = localStorage.getItem('wastebid_user');
+                    if (saved) {
+                        try {
+                            const u = JSON.parse(saved) as { id: number };
+                            void fetchWallet(u.id);
+                        } catch {
+                            /* noop */
+                        }
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'bid_logs',
+                    filter: `listing_id=eq.${numericId}`,
+                },
+                () => {
+                    void refetchBidLogs(numericId);
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.warn(
+                        '[WasteBid] Realtime error — ใน Supabase: Database → Replication ให้รวมตาราง waste_listings และ bid_logs'
+                    );
+                }
+            });
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [id, refetchBidLogs, fetchWallet]);
+
+    useEffect(() => {
+        if (!item?.id) return;
+        const floor = Number(item.current_price) + Number(item.min_increment);
+        setBidAmount((prev) => (prev < floor ? floor : prev));
+    }, [item?.id, item?.current_price, item?.min_increment]);
 
     const handlePlaceBid = async () => {
         if (!currentUser || !item) return;
@@ -97,11 +173,11 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
 
             if (error) throw error;
             alert("🚀 ประมูลสำเร็จ!");
-            fetchAuctionData();
-            fetchWallet(currentUser.id);
+            void fetchAuctionData();
+            void fetchWallet(currentUser.id);
         } catch (error: any) {
             alert(`❌ ${error.message || "เกิดข้อผิดพลาด"}`);
-            fetchAuctionData();
+            void fetchAuctionData();
         } finally {
             setBidding(false);
         }
@@ -146,10 +222,14 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
 
     if (!item) return null;
 
+    const isAuctionActive =
+        item.status === 'open' && new Date(item.end_time).getTime() > currentTime.getTime();
+
     const timeLeft = () => {
+        if (item.status === 'closed') return 'ENDED';
         const end = new Date(item.end_time).getTime();
         const diff = end - currentTime.getTime();
-        if (diff <= 0) return "ENDED";
+        if (diff <= 0) return 'ENDED';
         const h = Math.floor(diff / (1000 * 60 * 60));
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
@@ -167,7 +247,14 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                         <ChevronLeft size={16} /> ย้อนกลับ
                     </button>
                     <div className="bg-white px-5 py-3 rounded-full border border-gray-100 text-[10px] font-black uppercase tracking-widest text-[#748D83] flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-[#748D83] rounded-full animate-ping" /> Live Auction
+                        {isAuctionActive ? (
+                            <>
+                                <div className="w-1.5 h-1.5 bg-[#748D83] rounded-full animate-ping" aria-hidden />
+                                Live Auction
+                            </>
+                        ) : (
+                            <span className="text-gray-500">จบการประมูล</span>
+                        )}
                     </div>
                 </div>
 
@@ -267,14 +354,14 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                                     
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between bg-white/5 p-2 rounded-2xl border border-white/10">
-                                            <button onClick={() => setBidAmount(bidAmount - Number(item.min_increment))} className="p-4 bg-white/5 rounded-xl hover:bg-white/10"><Minus size={18} /></button>
+                                            <button type="button" onClick={() => setBidAmount(bidAmount - Number(item.min_increment))} disabled={!isAuctionActive} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"><Minus size={18} /></button>
                                             <span className="text-2xl font-black text-white">฿{bidAmount.toLocaleString()}</span>
-                                            <button onClick={() => setBidAmount(bidAmount + Number(item.min_increment))} className="p-4 bg-white rounded-xl text-[#3A4A43] hover:bg-[#748D83] hover:text-white"><Plus size={18} /></button>
+                                            <button type="button" onClick={() => setBidAmount(bidAmount + Number(item.min_increment))} disabled={!isAuctionActive} className="p-4 bg-white rounded-xl text-[#3A4A43] hover:bg-[#748D83] hover:text-white disabled:opacity-40 disabled:pointer-events-none"><Plus size={18} /></button>
                                         </div>
 
                                         <button 
                                             onClick={handlePlaceBid} 
-                                            disabled={bidding || timeLeft() === "ENDED"} 
+                                            disabled={bidding || !isAuctionActive} 
                                             className="w-full py-6 bg-[#748D83] hover:bg-white hover:text-[#3A4A43] text-white rounded-2xl font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 shadow-xl"
                                         >
                                             {bidding ? <Loader2 className="animate-spin text-white" /> : <><Gavel size={20} /> ยืนยันราคาประมูล</>}

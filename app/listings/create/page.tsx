@@ -4,40 +4,40 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, DollarSign, Clock, MapPin,
-    Tag, Loader2, CheckCircle2, Image as ImageIcon,
-    FileText, AlignLeft, CalendarDays
+    Loader2, CheckCircle2, Image as ImageIcon,
+    FileText, AlignLeft, CalendarDays, Tag,
 } from 'lucide-react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic'; // ✅ เพิ่มสำหรับการโหลด Map
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 import ImageUploadDropzone from '../../components/ImageUploadDropzone';
 
-// 🚀 โหลด Map แบบ Dynamic (แก้ Error window is not defined)
 const LocationPickerMap = dynamic(() => import('../../components/LocationPickerMap'), {
     ssr: false,
-    loading: () => <div className="h-[320px] w-full bg-gray-100 animate-pulse rounded-[2rem] flex items-center justify-center text-gray-400 font-bold uppercase tracking-widest text-xs">กำลังโหลดแผนที่...</div>
+    loading: () => (
+        <div className="h-[320px] w-full wb-shimmer-skeleton rounded-xl flex items-center justify-center text-sm font-medium text-[var(--wb-sage)] border border-[color-mix(in_srgb,var(--wb-sage)_12%,transparent)]">
+            กำลังโหลดแผนที่…
+        </div>
+    ),
 });
 
-// --- Card Animation Wrapper ---
 const FormCard = ({ children, icon: Icon, title, description, delay = 0 }: any) => (
     <motion.section
-        initial={{ y: 15, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay, duration: 0.5 }}
-        className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-gray-100 shadow-sm space-y-6"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay, duration: 0.22, ease: 'easeOut' }}
+        className="bg-[var(--wb-white)] rounded-2xl p-6 md:p-8 border border-[color-mix(in_srgb,var(--wb-sage)_16%,transparent)] space-y-6"
     >
-        <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-[#748D83]/10 rounded-xl text-[#748D83]">
-                <Icon size={20} />
+        <div className="flex items-start gap-3 pb-2 border-b border-[color-mix(in_srgb,var(--wb-sage)_10%,transparent)]">
+            <div className="shrink-0 p-2 rounded-lg bg-[color-mix(in_srgb,var(--wb-sage)_10%,transparent)] text-[var(--wb-forest-mid)]">
+                <Icon size={18} strokeWidth={1.75} />
             </div>
             <div>
-                <h2 className="font-black text-[#3A4A43] leading-tight">{title}</h2>
-                {description && <p className="text-gray-400 text-xs mt-1">{description}</p>}
+                <h2 className="font-semibold text-[var(--wb-forest)] leading-snug">{title}</h2>
+                {description && <p className="text-[var(--wb-sage-soft)] text-sm mt-1 font-medium">{description}</p>}
             </div>
         </div>
-        <div className="space-y-5">
-            {children}
-        </div>
+        <div className="space-y-5">{children}</div>
     </motion.section>
 );
 
@@ -46,12 +46,11 @@ export default function CreateListingPage() {
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
 
-    // --- 📝 Form States ---
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Metal');
-    const [location, setLocation] = useState(''); // เก็บชื่อที่อยู่ (Text)
-    const [coords, setCoords] = useState<{ lat: number, lng: number } | null>(null); // ✅ เก็บพิกัด (Map)
+    const [location, setLocation] = useState('');
+    const [coords, setCoords] = useState<{ lat: number, lng: number } | null>(null);
     const [startPrice, setStartPrice] = useState('');
     const [minIncrement, setMinIncrement] = useState('100');
     const [endTime, setEndTime] = useState('');
@@ -66,36 +65,32 @@ export default function CreateListingPage() {
         setUser(JSON.parse(savedUser));
     }, []);
 
-    // 📍 ฟังก์ชันดึงชื่อที่อยู่จากพิกัด (Reverse Geocoding)
-// มองหาฟังก์ชัน handleMapChange ใน page.tsx แล้ววางทับด้วยอันนี้:
-const handleMapChange = async (newCoords: { lat: number, lng: number }) => {
-    setCoords(newCoords);
-    try {
-        // ดึงข้อมูลที่ละเอียดขึ้น
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${newCoords.lat}&lon=${newCoords.lng}&accept-language=th`);
-        const data = await res.json();
-        
-        if (data.address) {
-            const a = data.address;
-            // ✅ เรียงลำดับ: เลขที่บ้าน/อาคาร > ถนน > ซอย > ตำบล > อำเภอ > จังหวัด
-            const addressParts = [
-                a.house_number || a.building || '',
-                a.road ? `ถ.${a.road}` : '',
-                a.suburb || a.subdistrict || a.village || '', // ตำบล/แขวง
-                a.city_district || a.district || '', // อำเภอ/เขต
-                a.province || a.city || '', // จังหวัด
-                a.postcode || ''
-            ].filter(part => part !== ""); // กรองตัวที่ว่างออก
-            
-            const detailedAddr = addressParts.join(" ");
-            
-            // ถ้าละเอียดเกินไปจนรก (แบบมีชื่อประเทศ) เราจะเอาเฉพาะส่วนที่เรากรองไว้
-            setLocation(detailedAddr || data.display_name);
+    const handleMapChange = async (newCoords: { lat: number; lng: number }) => {
+        setCoords(newCoords);
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${newCoords.lat}&lon=${newCoords.lng}&accept-language=th`
+            );
+            const data = await res.json();
+
+            if (data.address) {
+                const a = data.address;
+                const addressParts = [
+                    a.house_number || a.building || '',
+                    a.road ? `ถ.${a.road}` : '',
+                    a.suburb || a.subdistrict || a.village || '',
+                    a.city_district || a.district || '',
+                    a.province || a.city || '',
+                    a.postcode || '',
+                ].filter((part: string) => part !== '');
+
+                const detailedAddr = addressParts.join(' ');
+                setLocation(detailedAddr || data.display_name);
+            }
+        } catch (err) {
+            console.error('Reverse Geocoding Error:', err);
         }
-    } catch (err) {
-        console.error("Reverse Geocoding Error:", err);
-    }
-};
+    };
 
     const uploadImages = async (files: File[]) => {
         const uploadedUrls = [];
@@ -122,9 +117,9 @@ const handleMapChange = async (newCoords: { lat: number, lng: number }) => {
                 title,
                 description,
                 category,
-                location, // เก็บที่อยู่แบบ Text
-                lat: coords.lat, // ✅ เก็บ Latitude
-                lng: coords.lng, // ✅ เก็บ Longitude
+                location,
+                lat: coords.lat,
+                lng: coords.lng,
                 start_price: parseFloat(startPrice),
                 current_price: parseFloat(startPrice),
                 min_increment: parseFloat(minIncrement),
@@ -145,33 +140,41 @@ const handleMapChange = async (newCoords: { lat: number, lng: number }) => {
         }
     };
 
-    const inputClasses = "w-full mt-2 p-4 bg-[#F8F9F8] border border-gray-50 rounded-2xl outline-none focus:border-[#748D83] transition-all text-sm font-bold text-[#1A1A1A] placeholder:text-gray-400 shadow-inner";
+    const inputClasses =
+        'wb-focus w-full mt-1.5 px-3.5 py-3 rounded-xl border border-[color-mix(in_srgb,var(--wb-sage)_18%,transparent)] bg-[var(--wb-mist)] text-sm font-medium text-[var(--wb-forest)] placeholder:text-[color-mix(in_srgb,var(--wb-sage)_45%,transparent)] outline-none transition-colors';
+
+    const labelCls = 'text-[11px] font-semibold uppercase tracking-wider text-[var(--wb-sage)]';
 
     return (
-        <div className="bg-[#FAFAFA] min-h-screen font-kanit pb-20">
-            <main className="max-w-7xl mx-auto px-6 py-12">
-                <div className="flex items-center gap-4 mb-10 pb-4 border-b border-gray-100">
-                    <Link href="/dashboard">
-                        <button className="p-3.5 bg-white rounded-full border border-gray-100 shadow-sm hover:bg-gray-50 text-gray-400"><ArrowLeft size={20} /></button>
+        <div className="min-h-screen font-kanit pb-20 pt-6 sm:pt-8">
+            <main className="max-w-6xl mx-auto px-5 sm:px-6 py-6">
+                <header className="flex flex-col sm:flex-row sm:items-center gap-4 mb-10 pb-6 border-b border-[color-mix(in_srgb,var(--wb-sage)_14%,transparent)]">
+                    <Link
+                        href="/dashboard"
+                        className="wb-focus inline-flex self-start p-2.5 rounded-xl border border-[color-mix(in_srgb,var(--wb-sage)_16%,transparent)] text-[var(--wb-sage)] hover:bg-[var(--wb-mist)] transition-colors"
+                        aria-label="กลับไปแดชบอร์ด"
+                    >
+                        <ArrowLeft size={20} strokeWidth={1.75} />
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-black text-[#2D3A2E] tracking-tight">ลงประกาศขายขยะ</h1>
-                        <p className="text-gray-400 text-sm mt-1">ระบุรายละเอียดและปักหมุดตำแหน่งรับของ</p>
+                        <h1 className="text-2xl font-bold text-[var(--wb-forest)] tracking-tight">ลงประกาศขายขยะ</h1>
+                        <p className="text-sm text-[var(--wb-sage-soft)] font-medium mt-1">
+                            ระบุรายละเอียดและปักหมุดตำแหน่งรับของ
+                        </p>
                     </div>
-                </div>
+                </header>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-10 items-start">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[1fr,380px] gap-8 lg:gap-10 items-start">
                     <div className="space-y-8">
-                        {/* ส่วนที่ 1: ข้อมูลสินค้า & แผนที่ */}
                         <FormCard icon={FileText} title="ข้อมูลสินค้าและพิกัด" description="ปักหมุดบนแผนที่เพื่อระบุจุดนัดรับ">
                             <div>
-                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">ชื่อรายการขยะ</label>
+                                <label className={labelCls}>ชื่อรายการขยะ</label>
                                 <input required type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="เช่น เศษเหล็กเกรด A" className={inputClasses} />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">หมวดหมู่</label>
+                                    <label className={labelCls}>หมวดหมู่</label>
                                     <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClasses}>
                                         <option value="Metal">โลหะ / เหล็ก</option>
                                         <option value="Plastic">พลาสติก</option>
@@ -181,62 +184,67 @@ const handleMapChange = async (newCoords: { lat: number, lng: number }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">ที่อยู่นัดรับ</label>
+                                    <label className={labelCls}>ที่อยู่นัดรับ</label>
                                     <div className="relative">
-                                        <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#748D83]" />
-                                        <input required type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="ปักหมุดบนแผนที่..." className={`${inputClasses} pl-12`} />
+                                        <MapPin size={16} strokeWidth={1.75} className="absolute left-3.5 top-[calc(50%+2px)] -translate-y-1/2 text-[var(--wb-sage)] pointer-events-none" />
+                                        <input required type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="ปักหมุดบนแผนที่…" className={`${inputClasses} pl-10`} />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* 🗺️ Interactive Map */}
-                            <div className="mt-4">
-                                <label className="text-[11px] font-black text-[#748D83] uppercase tracking-widest ml-1 block mb-3 italic">* คลิกเลือกพิกัดที่ถูกต้องบนแผนที่</label>
+                            <div>
+                                <label className={`${labelCls} block mb-2`}>ตำแหน่งบนแผนที่</label>
+                                <p className="text-xs text-[var(--wb-sage-soft)] mb-3">คลิกเลือกพิกัดที่ถูกต้องบนแผนที่</p>
                                 <LocationPickerMap value={coords} onChange={handleMapChange} />
                             </div>
                         </FormCard>
 
-                        {/* ส่วนที่ 2: ราคา & เวลา */}
-                        <FormCard icon={AlignLeft} title="รายละเอียดประมูล" description="ตั้งราคาและเวลาสิ้นสุด" delay={0.1}>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormCard icon={AlignLeft} title="รายละเอียดประมูล" description="ตั้งราคาและเวลาสิ้นสุด" delay={0.06}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">ราคาเริ่มต้น (บาท)</label>
-                                    <div className="relative mt-2">
-                                        <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        <input required type="number" value={startPrice} onChange={(e) => setStartPrice(e.target.value)} className={`${inputClasses} pl-12 text-lg font-black`} />
+                                    <label className={labelCls}>ราคาเริ่มต้น (บาท)</label>
+                                    <div className="relative mt-1.5">
+                                        <DollarSign size={16} strokeWidth={1.75} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--wb-sage)] pointer-events-none" />
+                                        <input required type="number" value={startPrice} onChange={(e) => setStartPrice(e.target.value)} className={`${inputClasses} pl-10 text-base font-semibold tabular-nums`} />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">เคาะขั้นต่ำครั้งละ (บาท)</label>
+                                    <label className={labelCls}>เคาะขั้นต่ำครั้งละ (บาท)</label>
                                     <input required type="number" value={minIncrement} onChange={(e) => setMinIncrement(e.target.value)} className={inputClasses} />
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <label className="text-[11px] font-black text-[#748D83] uppercase tracking-widest ml-1 flex items-center gap-2"><Clock size={12} /> สิ้นสุดการประมูล</label>
-                                    <div className="relative mt-2">
-                                        <CalendarDays size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        <input required type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={`${inputClasses} pl-12 font-bold`} />
+                                    <label className={`${labelCls} flex items-center gap-2`}>
+                                        <Clock size={14} strokeWidth={1.75} aria-hidden />
+                                        สิ้นสุดการประมูล
+                                    </label>
+                                    <div className="relative mt-1.5">
+                                        <CalendarDays size={16} strokeWidth={1.75} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--wb-sage)] pointer-events-none" />
+                                        <input required type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={`${inputClasses} pl-10`} />
                                     </div>
                                 </div>
                             </div>
                         </FormCard>
 
-                        <FormCard icon={Tag} title="รายละเอียดขยะ" description="ระบุสภาพและน้ำหนัก" delay={0.2}>
-                            <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClasses} resize-none`} placeholder="สภาพสินค้า..." />
+                        <FormCard icon={Tag} title="รายละเอียดขยะ" description="ระบุสภาพและน้ำหนัก" delay={0.1}>
+                            <div>
+                                <label className={labelCls}>รายละเอียด</label>
+                                <textarea required rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClasses} resize-y min-h-[100px]`} placeholder="สภาพสินค้า…" />
+                            </div>
                         </FormCard>
                     </div>
 
-                    <div className="space-y-8 lg:sticky lg:top-28">
-                        <FormCard icon={ImageIcon} title="📸 รูปภาพสินค้า" description="สูงสุด 5 รูป" delay={0.3}>
+                    <div className="space-y-6 lg:sticky lg:top-28">
+                        <FormCard icon={ImageIcon} title="รูปภาพสินค้า" description="สูงสุด 5 รูป" delay={0.12}>
                             <ImageUploadDropzone onImagesChange={(files) => setImages(files)} maxImages={5} />
                         </FormCard>
 
-                        <motion.button
-                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                            type="submit" disabled={loading}
-                            className="w-full bg-[#3A4A43] text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-[#748D83] transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-70"
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="wb-focus w-full bg-[var(--wb-forest-mid)] text-[var(--wb-white)] py-3.5 rounded-xl text-xs font-semibold uppercase tracking-wider hover:opacity-90 disabled:opacity-55 transition-opacity flex items-center justify-center gap-2"
                         >
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : <><CheckCircle2 size={18} /> ยืนยันและลงประกาศ</>}
-                        </motion.button>
+                            {loading ? <Loader2 className="animate-spin" size={18} strokeWidth={1.75} /> : <><CheckCircle2 size={18} strokeWidth={1.75} /> ยืนยันและลงประกาศ</>}
+                        </button>
                     </div>
                 </form>
             </main>
