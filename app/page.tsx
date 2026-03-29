@@ -1,379 +1,233 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import {
-  ArrowRight,
-  ShieldCheck,
-  Clock,
-  MapPin,
-  Leaf,
-  ChevronRight,
-  Zap,
-  MapPinned,
-  Users,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
-const serviceItems = [
-  {
-    icon: Zap,
-    t: 'ประมูลแบบเรียลไทม์',
-    d: 'อัปเดตราคาและประวัติการเสนอราคาทันที',
-  },
-  {
-    icon: MapPinned,
-    t: 'ลงขายพร้อมแผนที่',
-    d: 'ระบุจุดนัดรับให้ชัดเจน ลดความเสี่ยงในการส่งมอบ',
-  },
-  {
-    icon: Users,
-    t: 'แยกสิทธิ์ผู้ขาย / ผู้ซื้อ',
-    d: 'แยก Account ของ Owner และ Bidder อย่างชัดเจน',
-  },
-];
+import Link from "next/link";
+import { motion, Variants } from "framer-motion";
+import { ArrowRight, Zap, ShieldCheck, TrendingUp, Search, Building2, MapPin } from "lucide-react";
 
-export default function GuestLandingPage() {
-  const [liveItems, setLiveItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+export default function HomePage() {
+  // --- Animation Variants (The "Premium Motion" Logic) ---
+  
+  // 1. Container Variants for Staggering Children
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15, // Delay between each child
+        delayChildren: 0.3,
+      },
+    },
+  };
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchLiveAuctions = async () => {
-      setLoading(true);
-      setFetchError(null);
-      const { data, error } = await supabase
-        .from('waste_listings')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(6);
-      if (cancelled) return;
-      if (error) {
-        console.error(error);
-        setFetchError('ไม่สามารถโหลดรายการได้ในขณะนี้');
-        setLiveItems([]);
-      } else {
-        setLiveItems(data || []);
-      }
-      setLoading(false);
-    };
-    fetchLiveAuctions();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // 2. Individual Item Variants (Fade Up & Scale)
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring", // Use spring for natural bounce
+        stiffness: 100,
+        damping: 15,
+        duration: 0.8,
+      },
+    },
+  };
+
+  // 3. Floating Action Bar Animation
+  const floatingBarVariants: Variants = {
+    hidden: { opacity: 0, y: 50, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 120,
+        damping: 12,
+        delay: 0.8, // Appears last for emphasis
+      },
+    },
+    hover: {
+      y: -5, // Subtle float up on hover
+      boxShadow: "0 25px 50px -12px rgba(16, 185, 129, 0.25)", // Emerald shadow
+      transition: { type: "spring", stiffness: 400, damping: 10 },
+    },
+  };
 
   return (
-    <div className="relative min-h-screen font-kanit overflow-x-hidden">
-      <section className="relative pt-36 sm:pt-40 md:pt-44 pb-20 md:pb-28 px-5 sm:px-6">
-        <div
-          className="pointer-events-none absolute inset-0 wb-grid-dots opacity-[0.2]"
-          aria-hidden
-        />
+    <main className="min-h-screen bg-white text-slate-950 selection:bg-emerald-100 overflow-hidden relative">
+      {/* Background Graphic Element - Large, Subtle */}
+      <div className="absolute top-0 right-0 w-[60%] h-[100vh] bg-[#F7FDF9] rounded-l-[100px] z-0 pointer-events-none" />
 
-        <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20 items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
-            className="space-y-8 text-center lg:text-left"
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--wb-sage)] mx-auto lg:mx-0 max-w-md">
-              Marketplace &amp; Auction
-            </p>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[var(--wb-forest)] leading-[1.12] tracking-tight">
-              เปลี่ยนขยะในมือ
-              <br />
-              <span className="text-[var(--wb-sage)]">ให้เป็นเงินสด</span>
-            </h1>
-            <p className="text-[var(--wb-sage-soft)] text-base md:text-lg font-medium max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              แพลตฟอร์มประมูลขยะรีไซเคิลที่โปร่งใส เชื่อมผู้ขายกับผู้ซื้อโดยตรง
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-center lg:justify-start">
-              <Link
-                href="/auth/register"
-                className="wb-focus inline-flex justify-center items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold text-[var(--wb-white)] bg-[var(--wb-forest-mid)] hover:opacity-90 transition-opacity"
-              >
-                เริ่มประมูลเลย
-                <ArrowRight size={18} strokeWidth={1.75} aria-hidden />
-              </Link>
-              <Link
-                href="/#live-auctions"
-                className="wb-focus inline-flex justify-center items-center gap-1.5 px-8 py-3.5 rounded-xl text-sm font-semibold text-[var(--wb-forest-mid)] border border-[color-mix(in_srgb,var(--wb-sage)_32%,transparent)] bg-[var(--wb-white)] hover:bg-[var(--wb-mist)] transition-colors"
-              >
-                สำรวจรายการ
-                <ChevronRight size={18} strokeWidth={1.75} aria-hidden />
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-4 justify-center lg:justify-start pt-2 border-t border-[color-mix(in_srgb,var(--wb-sage)_18%,transparent)] lg:border-0 lg:pt-0">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="w-10 h-10 rounded-full border-2 border-[var(--wb-cream)] bg-[var(--wb-mist)] overflow-hidden"
-                  >
-                    <img
-                      src={`https://i.pravatar.cc/100?img=${i + 15}`}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="text-left text-xs">
-                <p className="text-[var(--wb-forest)] font-semibold">ได้รับการยินยอมจาก 500+ ผู้ใช้งานทั่วโลก</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, delay: 0.06, ease: 'easeOut' }}
-            className="relative mx-auto max-w-md lg:max-w-none"
-          >
-            <div className="rounded-3xl overflow-hidden border border-[color-mix(in_srgb,var(--wb-sage)_22%,transparent)] bg-[var(--wb-white)]">
-              <img
-                src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1200"
-                alt="Recycle"
-                className="w-full h-[min(420px,52vh)] object-cover"
-              />
-            </div>
-
-            <div className="mt-6 sm:absolute sm:bottom-4 sm:left-4 sm:mt-0 flex items-start gap-4 rounded-2xl bg-[var(--wb-white)] p-4 border border-[color-mix(in_srgb,var(--wb-sage)_18%,transparent)] max-w-[min(100%,280px)] shadow-sm">
-              <div className="shrink-0 p-2.5 rounded-xl bg-[color-mix(in_srgb,var(--wb-sage)_14%,transparent)] text-[var(--wb-forest-mid)]">
-                <ShieldCheck size={22} strokeWidth={1.75} aria-hidden />
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--wb-sage)]">
-                  ความน่าเชื่อถือ
-                </p>
-                <p className="font-semibold text-[var(--wb-forest)] text-sm leading-snug">
-                  Escrow · ตรวจสอบย้อนหลัง
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section id="services" className="py-20 md:py-24 px-5 sm:px-6 scroll-mt-28 border-t border-[color-mix(in_srgb,var(--wb-sage)_15%,transparent)]">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-12 md:mb-14 max-w-2xl mx-auto md:mx-0 text-center md:text-left">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--wb-sage)] mb-3">
-              บริการของเรา
-            </h2>
-            <p className="text-2xl md:text-3xl font-bold text-[var(--wb-forest)] leading-snug tracking-tight">
-              เชื่อมผู้ขายกับผู้ซื้อโดยตรง โปร่งใส และมีวอลเล็ตรองรับ
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {serviceItems.map((x) => (
-              <div
-                key={x.t}
-                className="rounded-2xl bg-[var(--wb-white)] border border-[color-mix(in_srgb,var(--wb-sage)_18%,transparent)] p-8 flex flex-col gap-4"
-              >
-                <div className="inline-flex p-2.5 rounded-lg bg-[color-mix(in_srgb,var(--wb-sage)_10%,transparent)] text-[var(--wb-forest-mid)]">
-                  <x.icon size={20} strokeWidth={1.75} aria-hidden />
-                </div>
-                <h3 className="font-semibold text-[var(--wb-forest)] text-lg leading-snug">
-                  {x.t}
-                </h3>
-                <p className="text-sm text-[var(--wb-sage-soft)] leading-relaxed font-medium">
-                  {x.d}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-14 md:py-16 px-5 sm:px-6">
-        <div className="max-w-6xl mx-auto rounded-2xl bg-[var(--wb-forest-mid)] px-8 py-12 md:px-12 md:py-14 border border-[color-mix(in_srgb,var(--wb-white)_12%,transparent)]">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8 lg:divide-x lg:divide-[color-mix(in_srgb,var(--wb-white)_18%,transparent)]">
-            {[
-              { label: 'ยอดประมูลสะสม', value: '฿500k +' },
-              { label: 'ขยะรีไซเคิลแล้ว', value: '32 Tons' },
-              { label: 'รายการประมูล', value: '1,800+' },
-              { label: 'ความโปร่งใส', value: '100%' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center lg:px-6 first:lg:pl-0 space-y-2">
-                <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--wb-white)] tabular-nums tracking-tight">
-                  {stat.value}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[color-mix(in_srgb,var(--wb-white)_58%,transparent)]">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="live-auctions" className="py-20 md:py-24 px-5 sm:px-6 scroll-mt-24 border-t border-[color-mix(in_srgb,var(--wb-sage)_15%,transparent)]">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--wb-sage)] ring-2 ring-[color-mix(in_srgb,var(--wb-sage)_35%,transparent)]" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--wb-sage)]">
-                  กำลังเปิดประมูล
-                </span>
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold text-[var(--wb-forest)] tracking-tight">
-                รายการประมูลล่าสุด
-              </h3>
-              <p className="text-sm text-[var(--wb-sage-soft)] font-medium max-w-md leading-relaxed">
-                ข้อมูลและราคาวันสิ้นสุด
-              </p>
-            </div>
-            <Link
-              href="/dashboard"
-              className="wb-focus shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-[var(--wb-forest-mid)] border border-[color-mix(in_srgb,var(--wb-sage)_28%,transparent)] bg-[var(--wb-white)] hover:bg-[var(--wb-mist)] transition-colors"
+      {/* --- HERO SECTION --- */}
+      <motion.section
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className="relative pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto z-10"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+          {/* Left Side: Headlines & Text */}
+          <div className="md:col-span-8 flex flex-col items-start">
+            <motion.div
+              variants={itemVariants}
+              className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-100 text-sm font-semibold text-emerald-700 shadow-inner"
             >
-              ดูทั้งหมดในแดชบอร์ด
-              <ChevronRight size={18} strokeWidth={1.75} aria-hidden />
+              <Building2 className="w-4 h-4" />
+              <span>THE DIGITAL MARKETPLACE FOR SUSTAINABILITY</span>
+            </motion.div>
+
+            <motion.h1
+              variants={itemVariants}
+              className="text-6xl md:text-8xl font-black tracking-tighter text-slate-950 mb-8 leading-[0.95]"
+            >
+              Maximize Value. <br />
+              <span className="text-emerald-600">Eliminate</span> Waste.
+            </motion.h1>
+
+            <motion.p
+              variants={itemVariants}
+              className="text-xl md:text-2xl text-slate-600 mb-12 max-w-2xl font-normal leading-relaxed"
+            >
+              WasteBid is the premier auction platform transforming industrial
+              by-products into raw resources. Connect, bid, and trade with verified
+              global partners instantly.
+            </motion.p>
+          </div>
+        </div>
+
+        {/* --- Dribbble-Style FLOATING ACTION BAR (Logic preserved) --- */}
+        <motion.div
+          variants={floatingBarVariants}
+          whileHover="hover"
+          className="absolute left-1/2 -translate-x-1/2 bottom-[-40px] w-[90%] max-w-5xl bg-slate-950 rounded-[32px] p-4 flex flex-col md:flex-row items-center gap-4 shadow-2xl shadow-slate-300"
+        >
+          {/* Visual Only: Icon & Text */}
+          <div className="flex items-center gap-4 text-white flex-1 px-4 border-b md:border-b-0 md:border-r border-slate-700 pb-4 md:pb-0 w-full md:w-auto">
+            <Search className="w-8 h-8 text-emerald-400" />
+            <div className="flex flex-col">
+              <span className="text-sm text-slate-400 font-medium">Search Materials</span>
+              <span className="text-lg font-semibold tracking-tight text-white">Metal, Plastic, Paper...</span>
+            </div>
+          </div>
+          
+          {/* Visual Only: Location Icon & Text */}
+          <div className="flex items-center gap-4 text-white flex-1 px-4 border-b md:border-b-0 md:border-r border-slate-700 pb-4 md:pb-0 w-full md:w-auto">
+            <MapPin className="w-8 h-8 text-emerald-400" />
+            <div className="flex flex-col">
+              <span className="text-sm text-slate-400 font-medium">Location</span>
+              <span className="text-lg font-semibold tracking-tight text-white">Global Listings</span>
+            </div>
+          </div>
+
+          {/* Actual LOGIC BUTTONS */}
+          <div className="flex items-center gap-3 w-full md:w-auto justify-center">
+            <Link
+              href="/marketplace"
+              className="px-8 py-5 bg-emerald-600 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-emerald-500 transition-colors group text-lg"
+            >
+              Explore Market
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              href="/listings/create"
+              className="px-8 py-5 bg-white text-slate-950 rounded-2xl font-bold hover:bg-slate-100 transition-colors text-lg"
+            >
+              Sell Material
             </Link>
           </div>
+        </motion.div>
+      </motion.section>
 
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-[420px] rounded-2xl wb-shimmer-skeleton border border-[color-mix(in_srgb,var(--wb-sage)_12%,transparent)]"
-                />
-              ))}
-            </div>
-          ) : fetchError ? (
-            <p className="text-center text-[var(--wb-sage-soft)] font-medium py-14 px-4 rounded-2xl bg-[var(--wb-white)] border border-[color-mix(in_srgb,var(--wb-sage)_15%,transparent)]">
-              {fetchError}
-            </p>
-          ) : liveItems.length === 0 ? (
-            <p className="text-center text-[var(--wb-sage-soft)] font-medium py-14 px-4 rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--wb-sage)_25%,transparent)]">
-              ยังไม่มีรายการประมูลที่เปิดอยู่ในขณะนี้
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {liveItems.map((item) => (
-                <AuctionCard key={item.id} item={item} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <footer
-        id="contact"
-        className="mt-12 text-[var(--wb-white)] scroll-mt-24 border-t border-[color-mix(in_srgb,var(--wb-sage)_20%,transparent)]"
-      >
-        <div className="bg-[var(--wb-forest)]">
-          <div className="max-w-6xl mx-auto px-5 sm:px-6 py-14 md:py-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-              <div className="space-y-5 text-center md:text-left">
-                <div className="flex items-center gap-3 justify-center md:justify-start">
-                  <div className="p-2 rounded-lg bg-[color-mix(in_srgb,var(--wb-white)_12%,transparent)]">
-                    <Leaf size={22} strokeWidth={1.75} aria-hidden />
-                  </div>
-                  <span className="text-2xl font-bold tracking-tight">WasteBid</span>
-                </div>
-                <p className="text-sm text-[color-mix(in_srgb,var(--wb-white)_65%,transparent)] leading-relaxed max-w-md mx-auto md:mx-0 font-medium">
-                  เราคือตัวกลางที่ทำให้ขยะของคุณมีมูลค่า และช่วยลดผลกระทบต่อสิ่งแวดล้อมอย่างยั่งยืน
-                </p>
-                <p className="text-sm font-medium text-[color-mix(in_srgb,var(--wb-white)_75%,transparent)]">
-                  ติดต่อ:{' '}
-                  <a
-                    href="mailto:hello@wastebid.app"
-                    className="text-[var(--wb-sage-soft)] underline underline-offset-4 decoration-[color-mix(in_srgb,var(--wb-white)_35%,transparent)] hover:opacity-90 wb-focus rounded-sm"
-                  >
-                    wastebidsociety@gmail.com
-                  </a>
-                </p>
-              </div>
-              <div className="flex flex-col md:items-end gap-6 text-center md:text-right">
-                <div className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-2 text-[11px] font-semibold uppercase tracking-wider text-[color-mix(in_srgb,var(--wb-white)_55%,transparent)]">
-                  <span className="cursor-default" title="เร็ว ๆ นี้">
-                    
-                  </span>
-                  <span className="cursor-default" title="เร็ว ๆ นี้">
-                    
-                  </span>
-                  <a
-                    href="mailto:hello@wastebid.app"
-                    className="text-[var(--wb-sage-soft)] hover:opacity-90 wb-focus rounded-sm"
-                  >
-                    Contact Us
-                  </a>
-                </div>
-                <p className="text-[10px] text-[color-mix(in_srgb,var(--wb-white)_38%,transparent)] font-semibold uppercase tracking-widest">
-                  © 2026 Waste Bid
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-function AuctionCard({ item }: { item: any }) {
-  return (
-    <article className="flex flex-col rounded-2xl bg-[var(--wb-white)] border border-[color-mix(in_srgb,var(--wb-sage)_18%,transparent)] overflow-hidden hover:border-[color-mix(in_srgb,var(--wb-sage)_32%,transparent)] transition-colors">
-      <div className="aspect-[4/3] bg-[var(--wb-mist)] relative">
-        <img
-          src={item.image_urls?.[0] || 'https://via.placeholder.com/400'}
-          alt={item.title}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide text-[var(--wb-forest-mid)] bg-[var(--wb-white)]/95 border border-[color-mix(in_srgb,var(--wb-sage)_15%,transparent)]">
-          {item.category}
-        </div>
-      </div>
-
-      <div className="flex flex-col flex-1 p-6 gap-5">
-        <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--wb-sage)] mb-2">
-            <MapPin size={14} strokeWidth={1.75} aria-hidden />
-            {item.location || 'Bangkok, Thailand'}
-          </div>
-          <h3 className="text-lg font-semibold text-[var(--wb-forest)] leading-snug line-clamp-2">
-            {item.title}
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[color-mix(in_srgb,var(--wb-sage)_14%,transparent)]">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--wb-sage)] mb-1">
-              ราคาปัจจุบัน
-            </p>
-            <p className="text-xl font-bold text-[var(--wb-forest-mid)] tabular-nums">
-              ฿{Number(item.current_price).toLocaleString()}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--wb-sage)] mb-1 flex items-center justify-end gap-1">
-              <Clock size={12} strokeWidth={1.75} aria-hidden />
-              สิ้นสุด
-            </p>
-            <p className="text-xs font-semibold text-[var(--wb-forest)] tabular-nums">
-              {new Date(item.end_time).toLocaleDateString('th-TH')}
-            </p>
-          </div>
-        </div>
-
-        <Link
-          href={`/listings/${item.id}`}
-          className="wb-focus mt-auto w-full py-3.5 rounded-xl text-center text-xs font-semibold uppercase tracking-wider text-[var(--wb-white)] bg-[var(--wb-forest-mid)] hover:opacity-90 transition-opacity"
+      {/* --- BENTO GRID FEATURES SECTION --- */}
+      <section className="px-6 md:px-12 pt-32 pb-40 max-w-7xl mx-auto z-10 relative">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-150px" }} // Trigger when 150px in view
+          variants={containerVariants}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
         >
-          ดูรายละเอียดและประมูล
-        </Link>
-      </div>
-    </article>
+          {/* Feature Card 1 (Large Bento) */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            className="md:col-span-2 bg-white rounded-[40px] p-12 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group"
+          >
+            {/* Subtle Gradient Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <Zap className="w-16 h-16 text-emerald-500 mb-10" />
+                <h3 className="text-4xl font-extrabold text-slate-950 mb-4 tracking-tighter">
+                  Real-Time Bidding Engine.
+                </h3>
+              </div>
+              <p className="text-slate-600 text-xl leading-relaxed max-w-xl">
+                Experience the adrenaline of Live auctions. Our proprietary WebSocket technology ensures your bids are updated with zero latency, maximizing your chances of winning the materials you need.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Feature Card 2 */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            className="bg-slate-950 rounded-[40px] p-12 text-white flex flex-col justify-between"
+          >
+            <ShieldCheck className="w-16 h-16 text-emerald-400 mb-16" />
+            <div>
+              <h3 className="text-3xl font-extrabold mb-4 tracking-tight">
+                Verified Global <br /> Network.
+              </h3>
+              <p className="text-slate-300 text-lg leading-relaxed">
+                Trade with total peace of mind. Every participant undergoes strict verification, ensuring a secure and compliant environment.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Feature Card 3 */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            className="bg-white rounded-[40px] p-12 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between"
+          >
+            <TrendingUp className="w-16 h-16 text-blue-500 mb-16" />
+            <div>
+              <h3 className="text-3xl font-extrabold text-slate-950 mb-4 tracking-tight">
+                Live Market <br /> Analytics.
+              </h3>
+              <p className="text-slate-600 text-lg leading-relaxed">
+                Stay ahead with real-time price trends and historical data. Make data-driven decisions for optimal waste management ROI.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Feature Card 4 (Large Bento with Image/Illustration Placeholder) */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            className="md:col-span-2 bg-[#F9FBFA] rounded-[40px] p-12 border border-emerald-50 flex flex-col md:flex-row items-center gap-10 overflow-hidden relative"
+          >
+            <div className="flex-1">
+              <h3 className="text-4xl font-extrabold text-slate-950 mb-6 tracking-tighter">
+                Fuel the Circular Economy.
+              </h3>
+              <p className="text-slate-600 text-xl leading-relaxed max-w-lg">
+                Join our mission to eliminate industrial waste. By connecting by-products with companies that need them, we turn environmental challenges into sustainable business opportunities.
+              </p>
+            </div>
+            {/* Visual Placeholder: An abstract representation of circularity */}
+            <div className="w-40 h-40 md:w-60 md:h-60 rounded-full bg-emerald-100 border-4 border-dashed border-emerald-300 flex items-center justify-center relative">
+                <Building2 className="w-20 h-20 text-emerald-600" />
+                <div className="absolute inset-0 rounded-full border-4 border-emerald-400 animate-[spin_10s_linear_infinite]" />
+            </div>
+          </motion.div>
+        </motion.div>
+      </section>
+    </main>
   );
 }
