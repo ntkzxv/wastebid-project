@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    ArrowLeft, Wallet, Plus, ArrowUpRight, History, 
+import {
+    ArrowLeft, Wallet, Plus, ArrowUpRight, History,
     X, Loader2, CreditCard, ArrowDownRight, Info,
     ShieldCheck, Banknote
 } from 'lucide-react';
@@ -37,78 +37,78 @@ export default function WalletPage() {
     };
 
     const handleAction = async () => {
-    // 1. เช็กความพร้อมของข้อมูลกระเป๋าเงินก่อน
-    if (!wallet) {
-        return alert("ไม่พบข้อมูลกระเป๋าเงิน กรุณารีเฟรชหน้าเว็บอีกครั้ง");
-    }
+        // 1. เช็กความพร้อมของข้อมูลกระเป๋าเงินก่อน
+        if (!wallet) {
+            return alert("ไม่พบข้อมูลกระเป๋าเงิน กรุณารีเฟรชหน้าเว็บอีกครั้ง");
+        }
 
-    // 2. เช็กชื่อธนาคาร
-    if (!bankInfo.name.trim()) {
-        return alert("กรุณาระบุชื่อธนาคาร");
-    }
+        // 2. เช็กชื่อธนาคาร
+        if (!bankInfo.name.trim()) {
+            return alert("กรุณาระบุชื่อธนาคาร");
+        }
 
-    // 3. 🚨 เช็กเลขบัญชี (ต้องครบ 10 หลัก)
-    if (bankInfo.accNo.length !== 10) {
-        return alert("กรุณาใส่เลขบัญชีธนาคารให้ครบ 10 ตัว");
-    }
 
-    // 4. เช็กจำนวนเงิน
-    const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0) {
-        return alert("กรุณาระบุจำนวนเงินที่ถูกต้อง");
-    }
+        if (bankInfo.accNo.length < 10 || bankInfo.accNo.length > 15) {
+            return alert("📢 กรุณาใส่เลขบัญชีธนาคารให้ถูกต้อง (10 - 15 หลัก)");
+        }
 
-    // 5. กรณีถอนเงิน ต้องเช็กยอดเงินในกระเป๋าด้วย
-    if (showModal === 'withdraw' && numAmount > wallet.balance) {
-        return alert("ยอดเงินไม่พอให้ถอนครับเพื่อน!");
-    }
+        // 4. เช็กจำนวนเงิน
+        const numAmount = parseFloat(amount);
+        if (!numAmount || numAmount <= 0) {
+            return alert("กรุณาระบุจำนวนเงินที่ถูกต้อง");
+        }
 
-    setLoading(true);
+        // 5. กรณีถอนเงิน ต้องเช็กยอดเงินในกระเป๋าด้วย
+        if (showModal === 'withdraw' && numAmount > wallet.balance) {
+            return alert("ยอดเงินไม่พอให้ถอนครับเพื่อน!");
+        }
 
-    try {
-        // คำนวณยอดเงินใหม่
-        const newBalance = showModal === 'deposit' 
-            ? wallet.balance + numAmount 
-            : wallet.balance - numAmount;
+        setLoading(true);
 
-        // อัปเดตยอดเงินใน Wallets
-        await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
+        try {
+            // คำนวณยอดเงินใหม่
+            const newBalance = showModal === 'deposit'
+                ? wallet.balance + numAmount
+                : wallet.balance - numAmount;
 
-        // บันทึกประวัติ Transaction
-        await supabase.from('transactions').insert([{
-            user_id: user.id,
-            type: showModal,
-            amount: showModal === 'deposit' ? numAmount : -numAmount,
-            description: showModal === 'deposit' 
-                ? `ฝากเงินผ่าน ${bankInfo.name} (${bankInfo.accNo})` 
-                : `ถอนเงินไปที่ ${bankInfo.name} (${bankInfo.accNo})`
-        }]);
+            // อัปเดตยอดเงินใน Wallets
+            await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
 
-        alert("ดำเนินการเสร็จสิ้น");
-        setShowModal(null);
-        setAmount('');
-        setBankInfo({ name: '', accNo: '' }); // ล้างข้อมูลฟอร์ม
-        fetchData(user.id); // โหลดข้อมูลใหม่
+            // บันทึกประวัติ Transaction
+            await supabase.from('transactions').insert([{
+                user_id: user.id,
+                type: showModal,
+                amount: showModal === 'deposit' ? numAmount : -numAmount,
+                description: showModal === 'deposit'
+                    ? `ฝากเงินผ่าน ${bankInfo.name} (${bankInfo.accNo})`
+                    : `ถอนเงินไปที่ ${bankInfo.name} (${bankInfo.accNo})`
+            }]);
 
-    } catch (error) {
-        console.error(error);
-        alert("เกิดข้อผิดพลาดในการทำรายการ");
-    } finally {
-        setLoading(false);
-    }
-};
+            alert("ดำเนินการเสร็จสิ้น");
+            setShowModal(null);
+            setAmount('');
+            setBankInfo({ name: '', accNo: '' }); // ล้างข้อมูลฟอร์ม
+            fetchData(user.id); // โหลดข้อมูลใหม่
+
+        } catch (error) {
+            console.error(error);
+            alert("เกิดข้อผิดพลาดในการทำรายการ");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!user) return null;
 
     return (
         <div className="bg-[#F8F9F8] min-h-screen font-kanit pb-32 pt-32 px-6">
             <main className="max-w-4xl mx-auto">
-                
+
                 {/*Header*/}
                 <header className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-6">
                         <Link href="/dashboard">
-                            <motion.button 
+                            <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[#3A4A43]"
@@ -126,7 +126,7 @@ export default function WalletPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
                     {/*Premium Balance Card*/}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="md:col-span-8 relative group"
@@ -136,7 +136,7 @@ export default function WalletPage() {
                             {/*Abstract Shapes for Premium Feel*/}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
                             <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#748D83]/20 rounded-full -ml-20 -mb-20 blur-2xl" />
-                            
+
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-12">
                                     <div className="space-y-1">
@@ -153,7 +153,7 @@ export default function WalletPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-6">
                                     <div className="px-4 py-2 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
                                         <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-0.5">Account Status</p>
@@ -169,7 +169,7 @@ export default function WalletPage() {
                     </motion.div>
 
                     {/*Escrow Card*/}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="md:col-span-4 bg-white rounded-[3rem] p-10 border border-gray-100 shadow-sm flex flex-col justify-between"
@@ -184,7 +184,7 @@ export default function WalletPage() {
                             </h3>
                         </div>
                         <p className="text-[9px] text-gray-400 font-medium leading-relaxed">
-                            เงินประกันที่ถูกล็อกไว้ระหว่างการประมูลสินค้า <br/>
+                            เงินประกันที่ถูกล็อกไว้ระหว่างการประมูลสินค้า <br />
                             จะโอนเมื่อคุณยืนยันการรับสินค้า
                         </p>
                     </motion.div>
@@ -229,9 +229,8 @@ export default function WalletPage() {
                         {transactions.length > 0 ? transactions.map(t => (
                             <div key={t.id} className="p-8 flex justify-between items-center hover:bg-[#FAFAFA] transition-colors group">
                                 <div className="flex items-center gap-6">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                                        t.amount > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                                    }`}>
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${t.amount > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                                        }`}>
                                         {t.amount > 0 ? <ArrowDownRight size={20} /> : <ArrowUpRight size={20} />}
                                     </div>
                                     <div>
@@ -242,9 +241,8 @@ export default function WalletPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`text-lg font-black tabular-nums tracking-tighter ${
-                                        t.amount > 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
+                                    <p className={`text-lg font-black tabular-nums tracking-tighter ${t.amount > 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
                                         {t.amount > 0 ? '+' : ''}฿{Math.abs(t.amount).toLocaleString()}
                                     </p>
                                 </div>
@@ -264,17 +262,17 @@ export default function WalletPage() {
             <AnimatePresence>
                 {showModal && (
                     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
-                        <motion.div 
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
-                            exit={{ opacity: 0 }} 
-                            onClick={() => setShowModal(null)} 
-                            className="absolute inset-0 bg-[#3A4A43]/60 backdrop-blur-md" 
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowModal(null)}
+                            className="absolute inset-0 bg-[#3A4A43]/60 backdrop-blur-md"
                         />
-                        <motion.div 
-                            initial={{ scale: 0.9, y: 50, opacity: 0 }} 
-                            animate={{ scale: 1, y: 0, opacity: 1 }} 
-                            exit={{ scale: 0.9, y: 50, opacity: 0 }} 
+                        <motion.div
+                            initial={{ scale: 0.9, y: 50, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 50, opacity: 0 }}
                             className="bg-white w-full max-w-md rounded-[3.5rem] p-12 relative z-10 shadow-3xl"
                         >
                             <div className="flex justify-between items-center mb-10">
@@ -310,7 +308,7 @@ export default function WalletPage() {
                                             </select>
                                             {/* ลูกศร Dropdown แบบคลีนๆ */}
                                             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                                             </div>
                                         </div>
                                     </div>
@@ -319,9 +317,15 @@ export default function WalletPage() {
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Number</label>
                                         <input
                                             type="text"
-                                            placeholder="000-0-00000-0"
+                                            inputMode="numeric" // ให้มือถือเด้งแป้นตัวเลข
+                                            maxLength={15}      // จำกัดไม่ให้พิมพ์เกิน 15 ตัว
+                                            placeholder="ระบุเลขบัญชี 10 - 15 หลัก"
                                             value={bankInfo.accNo}
-                                            onChange={e => setBankInfo({ ...bankInfo, accNo: e.target.value })}
+                                            onChange={e => {
+                                                // 🔥 กรองให้เหลือแค่ตัวเลขเท่านั้น
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setBankInfo({ ...bankInfo, accNo: val });
+                                            }}
                                             className="w-full p-5 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#3A4A43] outline-none focus:ring-4 ring-[#748D83]/10 transition-all"
                                         />
                                     </div>
