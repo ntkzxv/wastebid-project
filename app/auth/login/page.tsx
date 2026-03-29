@@ -18,7 +18,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. ให้ Supabase Auth จัดการเช็คความปลอดภัยของ Email & Password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -28,7 +27,6 @@ export default function LoginPage() {
         throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
       }
 
-      // 2. เมื่อ Auth ผ่าน ค่อยไปดึงข้อมูล Profile จากตาราง users
       const { data: user, error: dbError } = await supabase
         .from('users')
         .select('*')
@@ -39,10 +37,8 @@ export default function LoginPage() {
         throw new Error("ล็อกอินสำเร็จ แต่ไม่พบข้อมูลโปรไฟล์ในระบบ");
       }
 
-      // 3. เก็บข้อมูลลง LocalStorage เหมือนเดิมเป๊ะ
       localStorage.setItem('wastebid_user', JSON.stringify(user));
 
-      // 4. แจ้งเตือนสำเร็จ (เช็คด้วยว่าใน DB มึงใช้ชื่อคอลัมน์ name หรือ username)
       setNoti({
         show: true,
         type: 'success',
@@ -51,7 +47,7 @@ export default function LoginPage() {
       });
 
       setTimeout(() => {
-        window.location.href = '/dashboard'; // บังคับย้ายหน้าและรีเฟรชไปในตัว จบปิ๊ง!
+        window.location.href = '/dashboard';
       }, 1500);
 
     } catch (err: any) {
@@ -64,7 +60,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center px-6 py-12 font-kanit fade-in-custom relative">
 
-      {/* 🛡️ Overlay กันการกดซ้ำ */}
+      {/*Overlay กันการกดซ้ำ*/}
       {loading && <div className="fixed inset-0 z-[100] cursor-wait" />}
 
       <motion.div

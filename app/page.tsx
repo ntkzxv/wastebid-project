@@ -29,7 +29,7 @@ const serviceItems = [
   {
     icon: Users,
     t: 'แยกสิทธิ์ผู้ขาย / ผู้ซื้อ',
-    d: 'แดชบอร์ดเฉพาะบทบาท ใช้งานง่ายทั้งสองฝ่าย',
+    d: 'แยก Account ของ Owner และ Bidder อย่างชัดเจน',
   },
 ];
 
@@ -125,8 +125,7 @@ export default function GuestLandingPage() {
                 ))}
               </div>
               <div className="text-left text-xs">
-                <p className="text-[var(--wb-forest)] font-semibold">1,200+ ผู้ใช้</p>
-                <p className="text-[var(--wb-sage-soft)] font-medium">ใช้งานอยู่ขณะนี้</p>
+                <p className="text-[var(--wb-forest)] font-semibold">ได้รับการยินยอมจาก 500+ ผู้ใช้งานทั่วโลก</p>
               </div>
             </div>
           </motion.div>
@@ -198,10 +197,10 @@ export default function GuestLandingPage() {
         <div className="max-w-6xl mx-auto rounded-2xl bg-[var(--wb-forest-mid)] px-8 py-12 md:px-12 md:py-14 border border-[color-mix(in_srgb,var(--wb-white)_12%,transparent)]">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8 lg:divide-x lg:divide-[color-mix(in_srgb,var(--wb-white)_18%,transparent)]">
             {[
-              { label: 'ยอดประมูลสะสม', value: '฿2.5M+' },
-              { label: 'ขยะรีไซเคิลแล้ว', value: '450 Tons' },
-              { label: 'รายการประมูล', value: '12,000+' },
-              { label: 'ความพึงพอใจ', value: '99%' },
+              { label: 'ยอดประมูลสะสม', value: '฿500k +' },
+              { label: 'ขยะรีไซเคิลแล้ว', value: '32 Tons' },
+              { label: 'รายการประมูล', value: '1,800+' },
+              { label: 'ความโปร่งใส', value: '100%' },
             ].map((stat) => (
               <div key={stat.label} className="text-center lg:px-6 first:lg:pl-0 space-y-2">
                 <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--wb-white)] tabular-nums tracking-tight">
@@ -230,7 +229,7 @@ export default function GuestLandingPage() {
                 รายการประมูลล่าสุด
               </h3>
               <p className="text-sm text-[var(--wb-sage-soft)] font-medium max-w-md leading-relaxed">
-                เน้นข้อมูลราคาและวันสิ้นสุดให้อ่านได้เร็ว
+                ข้อมูลและราคาวันสิ้นสุด
               </p>
             </div>
             <Link
@@ -292,23 +291,23 @@ export default function GuestLandingPage() {
                     href="mailto:hello@wastebid.app"
                     className="text-[var(--wb-sage-soft)] underline underline-offset-4 decoration-[color-mix(in_srgb,var(--wb-white)_35%,transparent)] hover:opacity-90 wb-focus rounded-sm"
                   >
-                    hello@wastebid.app
+                    wastebidsociety@gmail.com
                   </a>
                 </p>
               </div>
               <div className="flex flex-col md:items-end gap-6 text-center md:text-right">
                 <div className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-2 text-[11px] font-semibold uppercase tracking-wider text-[color-mix(in_srgb,var(--wb-white)_55%,transparent)]">
                   <span className="cursor-default" title="เร็ว ๆ นี้">
-                    Privacy
+                    
                   </span>
                   <span className="cursor-default" title="เร็ว ๆ นี้">
-                    Terms
+                    
                   </span>
                   <a
                     href="mailto:hello@wastebid.app"
                     className="text-[var(--wb-sage-soft)] hover:opacity-90 wb-focus rounded-sm"
                   >
-                    Contact
+                    Contact Us
                   </a>
                 </div>
                 <p className="text-[10px] text-[color-mix(in_srgb,var(--wb-white)_38%,transparent)] font-semibold uppercase tracking-widest">

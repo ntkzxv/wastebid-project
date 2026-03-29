@@ -20,13 +20,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 🛡️ กันการกดซ้ำ
     if (loading || isSuccess) return;
 
     setLoading(true);
 
     try {
-      // 1. ตรวจสอบความถูกต้องเบื้องต้น
       if (formData.password.length < 6) {
         throw new Error("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
       }
@@ -34,59 +32,52 @@ export default function RegisterPage() {
         throw new Error("รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง");
       }
 
-      // 2. สมัครผ่าน Supabase Auth (ปลอดภัย 100%)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            username: formData.name, // เก็บชื่อไว้ใน metadata ด้วยเผื่อใช้
+            username: formData.name, 
           }
         }
       });
 
       if (authError) {
-        // ดัก Error กรณีอีเมลซ้ำจากฝั่ง Auth
         if (authError.message.includes('already registered') || authError.status === 400) {
            throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
         }
         throw authError;
       }
 
-      // 3. เอาข้อมูลมา Insert ลงตาราง users ของเรา
       if (authData.user) {
         const { error: insertError } = await supabase
           .from('users')
           .insert([{ 
-            // ให้ id ตรงกับ auth.users.id (ถ้าตั้ง id เป็น SERIAL ใน DB ก็เอาบรรทัดนี้ออกได้)
             username: formData.name, 
             email: formData.email, 
-            password_hash: 'managed_by_supabase_auth', // รหัสผ่านจริงอยู่ใน Auth แล้ว
+            password_hash: 'managed_by_supabase_auth', 
             phone: formData.phone,
             role: formData.role
-            // status กับ created_at ไม่ต้องส่ง เพราะเราตั้ง Default ไว้ใน DB แล้ว
           }]);
 
         if (insertError) throw insertError;
       }
 
-      // ✅ สมัครสำเร็จ
       setIsSuccess(true); 
-      setNoti({ show: true, type: 'success', title: 'สำเร็จ', msg: 'สมัครสมาชิกเรียบร้อย! กำลังพาไปหน้าเข้าสู่ระบบ...' });
+      setNoti({ show: true, type: 'success', title: 'สำเร็จ', msg: 'สมัครสมาชิกเรียบร้อย' });
       
-      // หน่วงเวลา 2 วินาทีแล้วไปหน้า Login
       setTimeout(() => router.push('/auth/login'), 2000);
 
     } catch (err: any) {
       setNoti({ show: true, type: 'error', title: 'ผิดพลาด', msg: err.message });
-      setLoading(false); // ปลดโหลดให้แก้ข้อมูลได้
+      setLoading(false); 
     }
   };
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center px-6 py-12 font-kanit fade-in-custom relative">
       
-      {/* 🛡️ Overlay กันคลิกซ้ำ */}
+      {/*Overlay กันคลิกซ้ำ*/}
       {(loading || isSuccess) && (
         <div className="fixed inset-0 z-[100] cursor-wait" />
       )}

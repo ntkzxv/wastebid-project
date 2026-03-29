@@ -92,12 +92,13 @@ export default function Navbar() {
                 <NavLink href="/" active={pathname === '/'} label="หน้าแรก" />
                 <NavLink href="/marketplace" active={pathname === '/marketplace'} label="ตลาดขยะ" />
                 <NavLink href="/#services" label="บริการ" />
+                <NavLink href="/#services" label="ติดต่อ" />
               </>
             ) : (
               <>
                 <NavLink href="/marketplace" active={pathname === '/marketplace'} label="Marketplace" icon={<ShoppingBag size={14}/>} />
                 <NavLink href="/dashboard" active={pathname === '/dashboard'} label="แดชบอร์ด" icon={<LayoutDashboard size={14}/>} />
-                {/* 🚀 เพิ่มเมนู My Bids สำหรับคนที่ไปประมูลขยะ */}
+                {/*เพิ่มเมนู My Bids สำหรับคนที่ไปประมูลขยะ*/}
                 {user.role === 'bidder' && (
                   <NavLink href="/dashboard/my_bid" active={pathname === '/dashboard/my_bid'} label="My Bids" icon={<Gavel size={14}/>} />
                 )}
@@ -105,7 +106,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* --- RIGHT SECTION: User & Wallet --- */}
+          {/*RIGHT SECTION: User & Wallet*/}
           <div className="flex items-center gap-2 sm:gap-4">
             {!user ? (
               <div className="flex items-center gap-2">
@@ -118,7 +119,7 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Wallet Balance */}
+                {/*Wallet Balance*/}
                 <motion.div 
                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                    className="hidden sm:flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-2xl bg-[#3A4A43] text-white shadow-lg shadow-[#3A4A43]/10"
@@ -132,7 +133,7 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
 
-                {/* Profile Toggle */}
+                {/*Profile Toggle*/}
                 <div className="h-8 w-[1px] bg-gray-100 hidden sm:block mx-1" />
                 
                 <Link href="/dashboard/profile" className="flex items-center gap-3 p-1 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100">
@@ -157,7 +158,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile Toggle */}
+            {/*Mobile Toggle*/}
             <button
               className="md:hidden p-3 rounded-2xl bg-gray-50 text-[#3A4A43] hover:bg-gray-100"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -167,7 +168,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* --- MOBILE MENU --- */}
+        {/*MOBILE MENU*/}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -204,7 +205,7 @@ export default function Navbar() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+//SUB-COMPONENTS
 
 function NavLink({ href, active, label, icon }: { href: string; active?: boolean; label: string, icon?: React.ReactNode }) {
   return (

@@ -37,27 +37,66 @@ export default function WalletPage() {
     };
 
     const handleAction = async () => {
-        const numAmount = parseFloat(amount);
-        if (!numAmount || numAmount <= 0) return alert("กรุณาระบุจำนวนเงินที่ถูกต้อง");
-        if (showModal === 'withdraw' && numAmount > wallet.balance) return alert("ยอดเงินไม่พอให้ถอนครับ!");
+    // 1. เช็กความพร้อมของข้อมูลกระเป๋าเงินก่อน
+    if (!wallet) {
+        return alert("ไม่พบข้อมูลกระเป๋าเงิน กรุณารีเฟรชหน้าเว็บอีกครั้ง");
+    }
 
-        setLoading(true);
+    // 2. เช็กชื่อธนาคาร
+    if (!bankInfo.name.trim()) {
+        return alert("กรุณาระบุชื่อธนาคาร");
+    }
 
-        const newBalance = showModal === 'deposit' ? wallet.balance + numAmount : wallet.balance - numAmount;
+    // 3. 🚨 เช็กเลขบัญชี (ต้องครบ 10 หลัก)
+    if (bankInfo.accNo.length !== 10) {
+        return alert("กรุณาใส่เลขบัญชีธนาคารให้ครบ 10 ตัว");
+    }
+
+    // 4. เช็กจำนวนเงิน
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+        return alert("กรุณาระบุจำนวนเงินที่ถูกต้อง");
+    }
+
+    // 5. กรณีถอนเงิน ต้องเช็กยอดเงินในกระเป๋าด้วย
+    if (showModal === 'withdraw' && numAmount > wallet.balance) {
+        return alert("ยอดเงินไม่พอให้ถอนครับเพื่อน!");
+    }
+
+    setLoading(true);
+
+    try {
+        // คำนวณยอดเงินใหม่
+        const newBalance = showModal === 'deposit' 
+            ? wallet.balance + numAmount 
+            : wallet.balance - numAmount;
+
+        // อัปเดตยอดเงินใน Wallets
         await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id);
 
+        // บันทึกประวัติ Transaction
         await supabase.from('transactions').insert([{
             user_id: user.id,
             type: showModal,
             amount: showModal === 'deposit' ? numAmount : -numAmount,
-            description: showModal === 'deposit' ? `ฝากเงินผ่าน ${bankInfo.name}` : `ถอนเงินไปที่ ${bankInfo.name}`
+            description: showModal === 'deposit' 
+                ? `ฝากเงินผ่าน ${bankInfo.name} (${bankInfo.accNo})` 
+                : `ถอนเงินไปที่ ${bankInfo.name} (${bankInfo.accNo})`
         }]);
 
+        alert("ดำเนินการเสร็จสิ้น");
         setShowModal(null);
         setAmount('');
-        fetchData(user.id);
+        setBankInfo({ name: '', accNo: '' }); // ล้างข้อมูลฟอร์ม
+        fetchData(user.id); // โหลดข้อมูลใหม่
+
+    } catch (error) {
+        console.error(error);
+        alert("เกิดข้อผิดพลาดในการทำรายการ");
+    } finally {
         setLoading(false);
-    };
+    }
+};
 
     if (!user) return null;
 
@@ -65,7 +104,7 @@ export default function WalletPage() {
         <div className="bg-[#F8F9F8] min-h-screen font-kanit pb-32 pt-32 px-6">
             <main className="max-w-4xl mx-auto">
                 
-                {/* --- Header --- */}
+                {/*Header*/}
                 <header className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-6">
                         <Link href="/dashboard">
@@ -86,7 +125,7 @@ export default function WalletPage() {
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
-                    {/* --- Premium Balance Card --- */}
+                    {/*Premium Balance Card*/}
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -94,7 +133,7 @@ export default function WalletPage() {
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-[#3A4A43] to-[#748D83] blur-2xl opacity-20 -z-10" />
                         <div className="bg-gradient-to-br from-[#3A4A43] via-[#4A5A53] to-[#3A4A43] rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden border border-white/10">
-                            {/* Abstract Shapes for Premium Feel */}
+                            {/*Abstract Shapes for Premium Feel*/}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
                             <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#748D83]/20 rounded-full -ml-20 -mb-20 blur-2xl" />
                             
@@ -129,7 +168,7 @@ export default function WalletPage() {
                         </div>
                     </motion.div>
 
-                    {/* --- Escrow Card --- */}
+                    {/*Escrow Card*/}
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -145,13 +184,13 @@ export default function WalletPage() {
                             </h3>
                         </div>
                         <p className="text-[9px] text-gray-400 font-medium leading-relaxed">
-                            เงินประกันที่ถูกล็อกไว้ระหว่างการประมูล <br/>
-                            จะโอนเมื่อคุณกดยืนยันรับสินค้า
+                            เงินประกันที่ถูกล็อกไว้ระหว่างการประมูลสินค้า <br/>
+                            จะโอนเมื่อคุณยืนยันการรับสินค้า
                         </p>
                     </motion.div>
                 </div>
 
-                {/* --- Quick Actions --- */}
+                {/*Quick Actions*/}
                 <div className="grid grid-cols-2 gap-6 mb-16">
                     {user.role === 'bidder' && (
                         <motion.button
@@ -177,7 +216,7 @@ export default function WalletPage() {
                     </motion.button>
                 </div>
 
-                {/* --- Transaction History --- */}
+                {/*Transaction History*/}
                 <div className="bg-white rounded-[3.5rem] border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-10 border-b border-gray-50 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -220,7 +259,8 @@ export default function WalletPage() {
                 </div>
             </main>
 
-            {/* --- Premium Modal --- */}
+
+            {/*Premium Modal*/}
             <AnimatePresence>
                 {showModal && (
                     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
@@ -253,13 +293,26 @@ export default function WalletPage() {
                                 <div className="space-y-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bank Name</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. KBank, SCB"
-                                            value={bankInfo.name}
-                                            onChange={e => setBankInfo({ ...bankInfo, name: e.target.value })}
-                                            className="w-full p-5 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#3A4A43] outline-none focus:ring-4 ring-[#748D83]/10 transition-all"
-                                        />
+                                        <div className="relative">
+                                            <select
+                                                value={bankInfo.name}
+                                                onChange={e => setBankInfo({ ...bankInfo, name: e.target.value })}
+                                                className="w-full p-5 bg-gray-50 rounded-2xl border-none text-sm font-bold text-[#3A4A43] outline-none focus:ring-4 ring-[#748D83]/10 transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option value="" disabled>โปรดเลือกธนาคารสำหรับทำรายการ</option>
+                                                {/* มึงไปแก้ชื่อธนาคารตรงนี้ได้เลย 6 ช่อง */}
+                                                <option value="ธนาคารที่ 1">ธนาคารกรุงเทพ (Bangkok Bank - BBL)</option>
+                                                <option value="ธนาคารที่ 2">ธนาคารกสิกรไทย (Kasikornbank - KBANK)</option>
+                                                <option value="ธนาคารที่ 3">ธนาคารกรุงไทย (Krungthai Bank - KTB)</option>
+                                                <option value="ธนาคารที่ 4">ธนาคารไทยพาณิชย์ (Siam Commercial Bank - SCB)</option>
+                                                <option value="ธนาคารที่ 5">ธนาคารยูโอบี (United Overseas Bank - UOB)</option>
+                                                <option value="ธนาคารที่ 6">ธนาคารเกียรตินาคินภัทร (Kiatnakin Phatra Bank - KKP)</option>
+                                            </select>
+                                            {/* ลูกศร Dropdown แบบคลีนๆ */}
+                                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-1.5">

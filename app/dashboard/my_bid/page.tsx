@@ -22,15 +22,13 @@ export default function MyBidPage() {
  const fetchBids = async (uid: number) => {
     setLoading(true);
 
-    // 1. ดึงรายการที่เราเคยไปประมูลไว้ (จากตาราง bids)
+    
     const { data: bidData } = await supabase
         .from('bids')
         .select('*, waste_listings(*)')
         .eq('user_id', uid)
         .order('created_at', { ascending: false });
 
-    // 2. ดึงรายการที่เราเป็นคนชนะ/คนซื้อล่าสุด (จากตาราง waste_listings โดยตรง)
-    // เพื่อกันเหนียวในกรณีที่กด Buy Now แล้วมันไม่ลงตาราง bids
     const { data: wonData } = await supabase
         .from('waste_listings')
         .select('*')
@@ -39,7 +37,6 @@ export default function MyBidPage() {
     let finalBids: any[] = [];
 
     if (bidData) {
-        // กรองเอาอันล่าสุดของแต่ละชิ้น
         const uniqueBidsMap = new Map();
         bidData.forEach((item: any) => {
             if (!uniqueBidsMap.has(item.listing_id)) {
@@ -49,8 +46,6 @@ export default function MyBidPage() {
         finalBids = Array.from(uniqueBidsMap.values());
     }
 
-    // 3. ผสานข้อมูล (Merge) 
-    // ถ้าชิ้นไหนเราชนะ (wonData) แต่ยังไม่อยู่ในลิสต์ (finalBids) ให้เพิ่มเข้าไป
     if (wonData) {
         wonData.forEach((item: any) => {
             const exists = finalBids.find(b => b.listing_id === item.id);
@@ -70,7 +65,7 @@ export default function MyBidPage() {
 };
 
     const handleConfirm = async (listingId: number) => {
-        if (!window.confirm("คุณได้รับสินค้าเรียบร้อยแล้วใช่ไหม? ระบบจะโอนเงินให้ผู้ขายทันที")) return;
+        if (!window.confirm("ยืนยันการรับสินค้า")) return;
         
         const { data, error } = await supabase.rpc('confirm_receipt', { 
             p_listing_id: listingId, 
@@ -78,9 +73,9 @@ export default function MyBidPage() {
         });
 
         if (error) {
-            alert(`❌ ผิดพลาด: ${error.message}`);
+            alert(` ผิดพลาด: ${error.message}`);
         } else {
-            alert("🎉 ขอบคุณที่ยืนยันการรับสินค้า! เงินถูกโอนให้ผู้ขายแล้ว");
+            alert("ยืนยันการรับสินค้าสำเร็จ");
             fetchBids(user.id);
         }
     };
@@ -96,7 +91,7 @@ export default function MyBidPage() {
         <div className="bg-[#F8F9F8] min-h-screen font-kanit pb-32 pt-32 px-6">
             <main className="max-w-4xl mx-auto">
                 
-                {/* --- Header --- */}
+                {/*Header*/}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div className="space-y-4">
                         <Link href="/dashboard" className="flex items-center gap-2 text-gray-400 hover:text-[#3A4A43] transition-colors group">
@@ -110,7 +105,7 @@ export default function MyBidPage() {
                     </div>
                 </header>
 
-                {/* --- Alert Banner --- */}
+                {/*Alert Banner*/}
                 <div className="bg-[#3A4A43] p-8 rounded-[2.5rem] mb-12 shadow-xl relative overflow-hidden group">
                     <Sparkles className="absolute right-8 top-1/2 -translate-y-1/2 text-white/5 group-hover:scale-125 transition-transform duration-1000" size={120} />
                     <div className="relative z-10 flex gap-6 items-center">
@@ -126,7 +121,7 @@ export default function MyBidPage() {
                     </div>
                 </div>
 
-                {/* --- Bids List --- */}
+                {/*Bids List*/}
                 <div className="space-y-4">
                     <AnimatePresence mode='popLayout'>
                         {bids.length > 0 ? bids.map((b, idx) => (
@@ -137,7 +132,7 @@ export default function MyBidPage() {
                                 key={b.id} 
                                 className="bg-white p-6 md:p-8 rounded-[3rem] border border-gray-100 flex flex-col md:flex-row items-center gap-8 shadow-sm hover:shadow-xl transition-all duration-500 group"
                             >
-                                {/* Item Image */}
+                                {/*Item Image*/}
                                 <div className="relative shrink-0">
                                     <div className="w-24 h-24 rounded-[1.8rem] overflow-hidden bg-gray-50 border-4 border-white shadow-md">
                                         <img src={b.waste_listings.image_urls?.[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
@@ -149,7 +144,7 @@ export default function MyBidPage() {
                                     )}
                                 </div>
 
-                                {/* Content */}
+                                {/*Content*/}
                                 <div className="flex-1 text-center md:text-left">
                                     <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                                         <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full tracking-widest ${
@@ -168,7 +163,7 @@ export default function MyBidPage() {
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
+                                {/*Action Buttons*/}
                                 <div className="flex items-center gap-4 w-full md:w-auto">
                                     {b.waste_listings.payment_status === 'escrow' && b.waste_listings.current_bidder_id === user?.id ? (
                                         <motion.button 
@@ -194,7 +189,7 @@ export default function MyBidPage() {
                             <div className="py-32 flex flex-col items-center justify-center text-center opacity-20">
                                 <Gavel size={64} className="mb-6" strokeWidth={1} />
                                 <h3 className="text-xl font-black uppercase tracking-[0.3em]">No Bids Found</h3>
-                                <p className="text-xs font-bold mt-2">ท่านยังไม่ได้ทำการประมูลสินค้าใดๆ ในขณะนี้</p>
+                                <p className="text-xs font-bold mt-2">ท่านยังไม่ได้ทำการประมูลสินค้า</p>
                             </div>
                         )}
                     </AnimatePresence>
